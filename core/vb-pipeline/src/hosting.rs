@@ -440,7 +440,7 @@ fn unreachable_note(root: &Path, lang: Lang) -> Option<String> {
 /// Every video and photo under the roots, once each: a hard link or a
 /// second root over the same folder is one file.
 pub fn find_footage(roots: &[PathBuf], skip: &Path) -> Vec<PathBuf> {
-    let skip = std::fs::canonicalize(skip).unwrap_or_else(|_| skip.to_path_buf());
+    let skip = dunce::canonicalize(skip).unwrap_or_else(|_| skip.to_path_buf());
     let skip = skip.as_path();
     let mut out = Vec::new();
     let mut seen: HashSet<(u64, u64)> = HashSet::new();
@@ -459,7 +459,7 @@ fn walk(
     seen: &mut HashSet<(u64, u64)>,
     visited: &mut HashSet<PathBuf>,
 ) {
-    let canonical = std::fs::canonicalize(dir).unwrap_or_else(|_| dir.to_path_buf());
+    let canonical = dunce::canonicalize(dir).unwrap_or_else(|_| dir.to_path_buf());
     if canonical.starts_with(skip) || !visited.insert(canonical) || is_draft(dir) {
         return;
     }
@@ -498,7 +498,7 @@ fn walk(
 /// absolute, a file that is there now and not a link, not hidden, not
 /// inside the library, and a hard link once.
 pub fn given_footage(files: &[PathBuf], skip: &Path) -> Vec<PathBuf> {
-    let skip = std::fs::canonicalize(skip).unwrap_or_else(|_| skip.to_path_buf());
+    let skip = dunce::canonicalize(skip).unwrap_or_else(|_| skip.to_path_buf());
     let mut listed: HashSet<&Path> = HashSet::new();
     let mut seen: HashSet<(u64, u64)> = HashSet::new();
     let mut out = Vec::new();
@@ -515,7 +515,7 @@ pub fn given_footage(files: &[PathBuf], skip: &Path) -> Vec<PathBuf> {
         if !meta.is_file() {
             continue;
         }
-        let canonical = std::fs::canonicalize(path).unwrap_or_else(|_| path.clone());
+        let canonical = dunce::canonicalize(path).unwrap_or_else(|_| path.clone());
         if canonical.starts_with(&skip) {
             continue;
         }
@@ -1006,7 +1006,7 @@ pub fn categories_for(
     let mut changed = false;
     let mut album = None;
     for path in paths {
-        let canonical = std::fs::canonicalize(path).unwrap_or_else(|_| path.clone());
+        let canonical = dunce::canonicalize(path).unwrap_or_else(|_| path.clone());
         let name = canonical.to_string_lossy().to_string();
         let key = file_key(&canonical);
         let current = catalogue

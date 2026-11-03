@@ -30,8 +30,12 @@ use std::sync::mpsc::Receiver;
 use std::sync::{Mutex, OnceLock};
 use vb_contracts::Micros;
 
-/// Frames from one ffmpeg process: raw RGBA on stdout, each frame's time on
-/// stderr from showinfo, as the sweep reads them.
+/// Frames from one ffmpeg process: raw RGB24 on stdout, given their alpha
+/// here, each frame's time on stderr from showinfo, as the sweep reads them.
+///
+/// RGB24 because every other frame either backend reads is RGB24, and on
+/// x86 swscale's RGBA comes out up to two levels from it: the linked
+/// backend's reader does the same, and the two stay alike.
 pub(super) struct CliFrames {
     program: String,
     child: Child,
@@ -49,8 +53,8 @@ impl FrameReader for CliFrames {
         if self.finished {
             return Ok(None);
         }
-        let mut rgba = vec![0u8; (self.width * self.height * 4) as usize];
-        match self.stdout.read_exact(&mut rgba) {
+        let mut rgb = vec![0u8; (self.width * self.height * 3) as usize];
+        match self.stdout.read_exact(&mut rgb) {
             Ok(()) => {}
             Err(e) if e.kind() == std::io::ErrorKind::UnexpectedEof => {
                 self.finished = true;
@@ -85,6 +89,10 @@ impl FrameReader for CliFrames {
             what: "frame timestamps",
             detail: "ffmpeg wrote a frame without reporting its time".into(),
         })?;
+        let rgba = rgb
+            .chunks_exact(3)
+            .flat_map(|p| [p[0], p[1], p[2], 255])
+            .collect();
         Ok(Some(VideoFrame {
             at: self.from + at,
             width: self.width,
@@ -414,19 +422,87 @@ fn encoders(ffmpeg: &Path) -> Vec<String> {
         .clone()
 }
 
-/// The encoder this ffmpeg writes `codec` with, best first: the Mac's media
-/// engine where there is one -- the same encoder the linked backend uses
-/// there -- else x264 or x265.
-pub(super) fn video_encoder(ffmpeg: &Path, codec: VideoCodec) -> Option<&'static str> {
+/// How this ffmpeg writes a codec: the encoder, and for Media Foundation's
+/// whether it is the GPU's.
+#[derive(Clone, Copy, Debug)]
+pub(super) struct VideoEncoder {
+    name: &'static str,
+    /// `Some(true)` for the GPU's Media Foundation encoder, `Some(false)` for
+    /// Microsoft's software one, `None` for any other encoder.
+    mf_hardware: Option<bool>,
+}
+
+/// The encoder this ffmpeg writes `codec` with, best first: the platform's
+/// own -- the Mac's media engine, Windows' Media Foundation, the same
+/// encoders the linked backend uses there -- else x264 or x265.
+pub(super) fn video_encoder(ffmpeg: &Path, codec: VideoCodec) -> Option<VideoEncoder> {
     let names: &[&'static str] = match codec {
-        VideoCodec::H264 => &["h264_videotoolbox", "libx264"],
-        VideoCodec::Hevc => &["hevc_videotoolbox", "libx265"],
+        VideoCodec::H264 => &["h264_videotoolbox", "h264_mf", "libx264"],
+        VideoCodec::Hevc => &["hevc_videotoolbox", "hevc_mf", "libx265"],
     };
     let have = encoders(ffmpeg);
     names
         .iter()
         .copied()
-        .find(|name| have.iter().any(|h| h == name))
+        .filter(|name| have.iter().any(|h| h == name))
+        .find_map(|name| {
+            if name.ends_with("_mf") {
+                let hardware = mf_hardware(ffmpeg, name)?;
+                Some(VideoEncoder {
+                    name,
+                    mf_hardware: Some(hardware),
+                })
+            } else {
+                Some(VideoEncoder {
+                    name,
+                    mf_hardware: None,
+                })
+            }
+        })
+}
+
+/// Whether Media Foundation's `encoder` writes through the GPU (`true`) or
+/// through Microsoft's software encoder (`false`), found by encoding a few
+/// frames each way, once per binary. `None` when neither opens: HEVC on a
+/// machine with no GPU encoder, since Windows has no software one.
+///
+/// The linked backend makes the same choice by opening the encoder; a
+/// process cannot try again, so this asks before the real one starts.
+fn mf_hardware(ffmpeg: &Path, encoder: &'static str) -> Option<bool> {
+    type Known = HashMap<(PathBuf, &'static str), Option<bool>>;
+    static KNOWN: OnceLock<Mutex<Known>> = OnceLock::new();
+    let mut known = KNOWN
+        .get_or_init(|| Mutex::new(HashMap::new()))
+        .lock()
+        .expect("the encoder list is never poisoned");
+    *known
+        .entry((ffmpeg.to_path_buf(), encoder))
+        .or_insert_with(|| {
+            const WIDTH: usize = 256;
+            const HEIGHT: usize = 144;
+            const FRAMES: usize = 5;
+            [true, false].into_iter().find(|&hardware| {
+                let Ok(mut child) = Command::new(ffmpeg)
+                    .args(["-hide_banner", "-v", "error", "-f", "rawvideo"])
+                    .args(["-pix_fmt", "nv12", "-s", &format!("{WIDTH}x{HEIGHT}")])
+                    .args(["-i", "-", "-c:v", encoder, "-hw_encoding"])
+                    .arg(if hardware { "1" } else { "0" })
+                    .args(["-f", "null", "-"])
+                    .stdin(Stdio::piped())
+                    .stdout(Stdio::null())
+                    .stderr(Stdio::null())
+                    .spawn()
+                else {
+                    return false;
+                };
+                if let Some(mut stdin) = child.stdin.take() {
+                    // Grey: luma and chroma at mid level. A refusal shows in
+                    // the exit status, so a failed write is not looked at.
+                    let _ = stdin.write_all(&vec![128u8; WIDTH * HEIGHT * 3 / 2 * FRAMES]);
+                }
+                child.wait().is_ok_and(|status| status.success())
+            })
+        })
 }
 
 impl FfmpegCli {
@@ -445,8 +521,13 @@ impl FfmpegCli {
         }
         if crate::still::is_still_path(path) {
             let rotation = crate::still::photo_meta(path).rotation;
-            let mut rgba = self.picture(path, rotation, width, height, "rgba")?;
-            rgba.truncate((width * height * 4) as usize);
+            // RGB24 given its alpha, as the frames of a video are (CliFrames).
+            let mut rgb = self.picture(path, rotation, width, height, "rgb24")?;
+            rgb.truncate((width * height * 3) as usize);
+            let rgba = rgb
+                .chunks_exact(3)
+                .flat_map(|p| [p[0], p[1], p[2], 255])
+                .collect();
             return Ok(Box::new(OnePicture(Some(VideoFrame {
                 at: Micros::ZERO,
                 width,
@@ -471,7 +552,7 @@ impl FfmpegCli {
             "-fps_mode".into(),
             "passthrough".into(),
             "-pix_fmt".into(),
-            "rgba".into(),
+            "rgb24".into(),
             "-f".into(),
             "rawvideo".into(),
             "-".into(),
@@ -621,11 +702,19 @@ impl FfmpegCli {
             format!("{}/{}", s.fps_num, s.fps_den),
             "-i".into(),
             "-".into(),
-            // RGB to BT.709 limited range, as HD video is, and said so.
+            // RGB to BT.709 limited range, as HD video is, and said so; NV12
+            // for Media Foundation, whose GPU encoders take nothing else.
             "-vf".into(),
-            "scale=out_color_matrix=bt709:out_range=tv,format=yuv420p".into(),
+            format!(
+                "scale=out_color_matrix=bt709:out_range=tv,format={}",
+                if encoder.mf_hardware.is_some() {
+                    "nv12"
+                } else {
+                    "yuv420p"
+                }
+            ),
             "-c:v".into(),
-            encoder.into(),
+            encoder.name.into(),
             "-b:v".into(),
             s.video_bitrate.to_string(),
             "-colorspace".into(),
@@ -640,6 +729,15 @@ impl FfmpegCli {
         if s.codec == VideoCodec::Hevc {
             // QuickTime and the Photos app play HEVC in MP4 only as hvc1.
             args.extend(["-tag:v".into(), "hvc1".into()]);
+        }
+        if let Some(hardware) = encoder.mf_hardware {
+            args.extend(["-hw_encoding".into(), u8::from(hardware).to_string()]);
+            if s.codec == VideoCodec::H264 {
+                // Left to itself Media Foundation writes Constrained
+                // Baseline; High, as the linked backend asks for. By number:
+                // h264_mf has no names for its profiles.
+                args.extend(["-profile:v".into(), "100".into()]);
+            }
         }
         args.extend(["-an".into(), picture.display().to_string()]);
         let mut child = Command::new(&self.ffmpeg)

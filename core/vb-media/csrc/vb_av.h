@@ -211,7 +211,9 @@ typedef struct vb_av_encode_settings {
     int32_t hevc;
 } vb_av_encode_settings;
 
-/* Whether this build can write H.264 (0) or HEVC (1) with AAC in an MP4. */
+/* Whether this build can write H.264 (0) or HEVC (1) with AAC in an MP4 on
+ * this machine. On Windows it opens Media Foundation's encoder to find
+ * out, which takes a moment: ask once. */
 int vb_av_can_encode(int32_t hevc);
 
 /* A finished piece written frame by frame, the sound alongside. */

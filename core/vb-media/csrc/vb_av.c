@@ -205,10 +205,11 @@ static void video_close(Video *v) {
 /*
  * The Mac decodes H.264 and HEVC on its media engine: 4K HEVC at several
  * times real time with the CPU idle, where the software decoder manages
- * about one and a half on every core it can use. Only those two codecs --
+ * about one and a half on every core it can use. Windows does the same on
+ * whatever GPU the machine has, through D3D11. Only those two codecs --
  * the ones cameras and phones record -- and only where the build carries
- * VideoToolbox; everywhere else, and for any stream the engine refuses,
- * libav decodes in software exactly as before.
+ * VideoToolbox or D3D11VA; everywhere else, and for any stream the engine
+ * refuses, libav decodes in software exactly as before.
  *
  * H.264 and HEVC decoding is bit-exact by specification, so the hardware
  * produces the same samples as the software decoder. It hands them over in
@@ -232,9 +233,30 @@ static int hw_wanted(enum AVCodecID codec) {
     return !(env && env[0] == '0');
 }
 
+/* The hardware decoders, each with the format its frames come in: one
+ * device per platform, so whichever this build carries and the machine
+ * opens is the one. D3D11's is the API that takes a device (d3d11va2),
+ * not the older one that wants the caller's own decoder context. */
+static const struct {
+    enum AVHWDeviceType device;
+    enum AVPixelFormat format;
+} hw_kinds[] = {
+    {AV_HWDEVICE_TYPE_VIDEOTOOLBOX, AV_PIX_FMT_VIDEOTOOLBOX},
+    {AV_HWDEVICE_TYPE_D3D11VA, AV_PIX_FMT_D3D11},
+};
+
+static int is_hw_format(int format) {
+    for (size_t i = 0; i < sizeof hw_kinds / sizeof hw_kinds[0]; i++) {
+        if (format == hw_kinds[i].format) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
 static enum AVPixelFormat pick_hw_format(AVCodecContext *ctx, const enum AVPixelFormat *fmts) {
     for (const enum AVPixelFormat *p = fmts; *p != AV_PIX_FMT_NONE; p++) {
-        if (*p == AV_PIX_FMT_VIDEOTOOLBOX) {
+        if (is_hw_format(*p)) {
             return *p;
         }
     }
@@ -249,24 +271,25 @@ static void hw_attach(Video *v, const AVCodec *codec) {
     if (!hw_wanted(codec->id)) {
         return;
     }
-    int offered = 0;
-    for (int i = 0;; i++) {
-        const AVCodecHWConfig *config = avcodec_get_hw_config(codec, i);
-        if (!config) {
-            break;
+    for (size_t k = 0; k < sizeof hw_kinds / sizeof hw_kinds[0]; k++) {
+        int offered = 0;
+        for (int i = 0;; i++) {
+            const AVCodecHWConfig *config = avcodec_get_hw_config(codec, i);
+            if (!config) {
+                break;
+            }
+            if (config->device_type == hw_kinds[k].device &&
+                (config->methods & AV_CODEC_HW_CONFIG_METHOD_HW_DEVICE_CTX)) {
+                offered = 1;
+                break;
+            }
         }
-        if (config->device_type == AV_HWDEVICE_TYPE_VIDEOTOOLBOX &&
-            (config->methods & AV_CODEC_HW_CONFIG_METHOD_HW_DEVICE_CTX)) {
-            offered = 1;
-            break;
+        if (offered && av_hwdevice_ctx_create(&v->hw_device, hw_kinds[k].device, NULL, NULL, 0) >= 0) {
+            v->dec->hw_device_ctx = av_buffer_ref(v->hw_device);
+            v->dec->get_format = pick_hw_format;
+            return;
         }
     }
-    if (!offered ||
-        av_hwdevice_ctx_create(&v->hw_device, AV_HWDEVICE_TYPE_VIDEOTOOLBOX, NULL, NULL, 0) < 0) {
-        return;
-    }
-    v->dec->hw_device_ctx = av_buffer_ref(v->hw_device);
-    v->dec->get_format = pick_hw_format;
 }
 
 /* NV12 or P010 into the planar layout of the same samples: Y copied (or, for
@@ -318,7 +341,7 @@ static void deinterleave(const AVFrame *src, AVFrame *dst, int high_bits) {
  * most of what the hardware saved.
  */
 static int video_pixels(Video *v, char *err, size_t err_len) {
-    if (v->frame->format != AV_PIX_FMT_VIDEOTOOLBOX) {
+    if (!is_hw_format(v->frame->format)) {
         return VB_AV_OK;
     }
     AVFrame *soft = av_frame_alloc();
@@ -2229,6 +2252,8 @@ struct vb_av_reader {
     int rotation;
     struct SwsContext *sws;
     int sws_format, sws_width, sws_height, sws_space, sws_range;
+    /* Each frame in RGB24 before it is given its alpha (reader_convert). */
+    uint8_t *rgb;
     /* The last frame before the moment, in case none comes after it. */
     AVFrame *before;
     int have_before;
@@ -2242,6 +2267,7 @@ void vb_av_reader_close(vb_av_reader *r) {
     }
     av_frame_free(&r->before);
     sws_freeContext(r->sws);
+    av_free(r->rgb);
     if (r->v.fmt || r->v.dec) {
         video_close(&r->v);
     }
@@ -2266,7 +2292,8 @@ int vb_av_reader_open(const char *path, int64_t from_us, uint32_t width, uint32_
     }
     r->path = av_strdup(path);
     r->before = av_frame_alloc();
-    if (!r->path || !r->before) {
+    r->rgb = av_malloc((size_t)width * height * 3);
+    if (!r->path || !r->before || !r->rgb) {
         vb_av_reader_close(r);
         set_err(err, err_len, "out of memory opening a reader");
         return VB_AV_ERR_DECODE;
@@ -2293,7 +2320,12 @@ int vb_av_reader_open(const char *path, int64_t from_us, uint32_t width, uint32_
 }
 
 /* `frame` upright and scaled into `rgba`, through a scaler kept while the
- * frames keep their format. */
+ * frames keep their format.
+ *
+ * Scaled to RGB24, as every one-frame read is, and given its alpha after:
+ * on x86 swscale's RGBA came out up to two levels from its RGB24 (0.64 on
+ * average, the fixture's frames), which put the editor's stopped preview,
+ * drawn from rgb_frame, off the frames its export reads here. */
 static int reader_convert(vb_av_reader *r, const AVFrame *frame, uint8_t *rgba, char *err,
                           size_t err_len) {
     AVFrame *upright = r->rotation ? turned(frame, r->rotation) : NULL;
@@ -2307,11 +2339,11 @@ static int reader_convert(vb_av_reader *r, const AVFrame *frame, uint8_t *rgba, 
         r->sws_height != src->height || r->sws_space != (int)src->colorspace ||
         r->sws_range != (int)src->color_range) {
         sws_freeContext(r->sws);
-        r->sws = scaler(src, AV_PIX_FMT_RGBA, (int)r->width, (int)r->height, 1);
+        r->sws = scaler(src, AV_PIX_FMT_RGB24, (int)r->width, (int)r->height, 1);
         if (!r->sws) {
             av_frame_free(&upright);
             const char *from = av_get_pix_fmt_name((enum AVPixelFormat)src->format);
-            set_err(err, err_len, "cannot convert %s frames to rgba", from ? from : "unknown");
+            set_err(err, err_len, "cannot convert %s frames to rgb24", from ? from : "unknown");
             return VB_AV_ERR_DECODE;
         }
         source_colours(r->sws, src, 1);
@@ -2321,14 +2353,21 @@ static int reader_convert(vb_av_reader *r, const AVFrame *frame, uint8_t *rgba, 
         r->sws_space = (int)src->colorspace;
         r->sws_range = (int)src->color_range;
     }
-    uint8_t *planes[4] = {rgba, NULL, NULL, NULL};
-    int strides[4] = {(int)r->width * 4, 0, 0, 0};
+    uint8_t *planes[4] = {r->rgb, NULL, NULL, NULL};
+    int strides[4] = {(int)r->width * 3, 0, 0, 0};
     int rows = sws_scale(r->sws, (const uint8_t *const *)src->data, src->linesize, 0,
                          src->height, planes, strides);
     av_frame_free(&upright);
     if (rows <= 0) {
         set_err(err, err_len, "scaling the frame produced no output");
         return VB_AV_ERR_DECODE;
+    }
+    const size_t pixels = (size_t)r->width * r->height;
+    for (size_t i = 0; i < pixels; i++) {
+        rgba[4 * i] = r->rgb[3 * i];
+        rgba[4 * i + 1] = r->rgb[3 * i + 1];
+        rgba[4 * i + 2] = r->rgb[3 * i + 2];
+        rgba[4 * i + 3] = 255;
     }
     return VB_AV_OK;
 }
@@ -2819,13 +2858,15 @@ static const AVCodec *video_encoder(int hevc) {
     return NULL;
 }
 
-int vb_av_can_encode(int32_t hevc) {
-    return video_encoder(hevc) && avcodec_find_encoder_by_name("aac") &&
-           av_guess_format("mp4", NULL, NULL);
+/* Media Foundation's encoders: the GPU's, which take NV12 alone, and
+ * Microsoft's software H.264, which takes NV12 or planar 4:2:0. */
+static int is_mf(const AVCodec *codec) {
+    return codec->wrapper_name && strcmp(codec->wrapper_name, "mf") == 0;
 }
 
-/* The planar picture format the encoder takes that a converted RGB frame
- * goes into best: 4:2:0, planar where it can be. */
+/* The picture format the encoder takes that a converted RGB frame goes
+ * into best: 4:2:0, planar where it can be -- NV12 for Media Foundation,
+ * whose GPU encoders refuse anything else. */
 static enum AVPixelFormat encoder_pix_fmt(const AVCodec *codec, AVCodecContext *ctx) {
     const enum AVPixelFormat *fmts = NULL;
 #if LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(61, 13, 100)
@@ -2841,17 +2882,101 @@ static enum AVPixelFormat encoder_pix_fmt(const AVCodec *codec, AVCodecContext *
     if (!fmts) {
         return AV_PIX_FMT_YUV420P;
     }
+    const enum AVPixelFormat first = is_mf(codec) ? AV_PIX_FMT_NV12 : AV_PIX_FMT_YUV420P;
+    const enum AVPixelFormat second = is_mf(codec) ? AV_PIX_FMT_YUV420P : AV_PIX_FMT_NV12;
     for (const enum AVPixelFormat *p = fmts; *p != AV_PIX_FMT_NONE; p++) {
-        if (*p == AV_PIX_FMT_YUV420P) {
+        if (*p == first) {
             return *p;
         }
     }
     for (const enum AVPixelFormat *p = fmts; *p != AV_PIX_FMT_NONE; p++) {
-        if (*p == AV_PIX_FMT_NV12) {
+        if (*p == second) {
             return *p;
         }
     }
     return AV_PIX_FMT_YUV420P;
+}
+
+#ifndef AV_PROFILE_H264_HIGH
+#define AV_PROFILE_H264_HIGH FF_PROFILE_H264_HIGH
+#endif
+
+/* Set up the picture's encoder in `w->venc` and open it. `hardware` says
+ * whether a Media Foundation encoder may be the GPU's; the others ignore
+ * it. Returns libav's code. */
+static int open_video_encoder(vb_av_writer *w, const AVCodec *vcodec,
+                              const vb_av_encode_settings *settings, int global_header,
+                              int hardware) {
+    w->venc = avcodec_alloc_context3(vcodec);
+    if (!w->venc) {
+        return AVERROR(ENOMEM);
+    }
+    w->venc->width = (int)settings->width;
+    w->venc->height = (int)settings->height;
+    w->venc->time_base = (AVRational){(int)settings->fps_den, (int)settings->fps_num};
+    w->venc->framerate = (AVRational){(int)settings->fps_num, (int)settings->fps_den};
+    w->venc->pix_fmt = encoder_pix_fmt(vcodec, w->venc);
+    w->venc->bit_rate = (int64_t)settings->video_bitrate;
+    w->venc->colorspace = AVCOL_SPC_BT709;
+    w->venc->color_primaries = AVCOL_PRI_BT709;
+    w->venc->color_trc = AVCOL_TRC_BT709;
+    w->venc->color_range = AVCOL_RANGE_MPEG;
+    /* A keyframe every two seconds or so: a phone scrubs the piece well. */
+    w->venc->gop_size = (int)((settings->fps_num * 2 + settings->fps_den - 1) / settings->fps_den);
+    if (global_header) {
+        w->venc->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
+    }
+    if (is_mf(vcodec) && !settings->hevc) {
+        /* Left to itself Media Foundation writes Constrained Baseline,
+         * hardware and software alike. */
+        w->venc->profile = AV_PROFILE_H264_HIGH;
+    }
+    AVDictionary *vopts = NULL;
+    /* The media engine where there is one, the system's own software
+     * encoder where there is not -- a virtual Mac, say. */
+    av_dict_set(&vopts, "allow_sw", "1", 0);
+    if (is_mf(vcodec)) {
+        av_dict_set(&vopts, "hw_encoding", hardware ? "1" : "0", 0);
+    }
+    int ret = avcodec_open2(w->venc, vcodec, &vopts);
+    av_dict_free(&vopts);
+    return ret;
+}
+
+/* Whether `codec` opens. Media Foundation's encoders are in every Windows
+ * build but open only where Windows has one to give -- HEVC only on a GPU
+ * that encodes it, there being no software HEVC encoder -- so they are
+ * tried, the GPU's first as the writer does; any other encoder the build
+ * carries opens. */
+static int encoder_opens(const AVCodec *codec, int hevc) {
+    if (!is_mf(codec)) {
+        return 1;
+    }
+    const vb_av_encode_settings probe = {
+        .video_bitrate = 1000000,
+        .audio_bitrate = 128000,
+        .width = 256,
+        .height = 144,
+        .fps_num = 30,
+        .fps_den = 1,
+        .sample_rate = 48000,
+        .channels = 2,
+        .hevc = hevc,
+    };
+    vb_av_writer w = {0};
+    int opens = 0;
+    for (int hardware = 1; hardware >= 0 && !opens; hardware--) {
+        opens = open_video_encoder(&w, codec, &probe, 1, hardware) >= 0;
+        avcodec_free_context(&w.venc);
+    }
+    return opens;
+}
+
+int vb_av_can_encode(int32_t hevc) {
+    begin_call();
+    const AVCodec *codec = video_encoder(hevc);
+    return codec && encoder_opens(codec, hevc) && avcodec_find_encoder_by_name("aac") &&
+           av_guess_format("mp4", NULL, NULL);
 }
 
 static void writer_free(vb_av_writer *w) {
@@ -2948,40 +3073,26 @@ int vb_av_writer_open(const char *dest, const vb_av_encode_settings *settings,
     int global_header = (w->oc->oformat->flags & AVFMT_GLOBALHEADER) != 0;
 
     /* The picture. */
-    w->venc = avcodec_alloc_context3(vcodec);
     w->pkt = av_packet_alloc();
     w->vframe = av_frame_alloc();
     w->aframe = av_frame_alloc();
-    if (!w->venc || !w->pkt || !w->vframe || !w->aframe) {
+    if (!w->pkt || !w->vframe || !w->aframe) {
         writer_free(w);
         set_err(err, err_len, "out of memory opening the encoder");
         return VB_AV_ERR_DECODE;
     }
-    w->venc->width = (int)settings->width;
-    w->venc->height = (int)settings->height;
-    w->venc->time_base = (AVRational){(int)settings->fps_den, (int)settings->fps_num};
-    w->venc->framerate = (AVRational){(int)settings->fps_num, (int)settings->fps_den};
-    w->venc->pix_fmt = encoder_pix_fmt(vcodec, w->venc);
-    w->venc->bit_rate = (int64_t)settings->video_bitrate;
-    w->venc->colorspace = AVCOL_SPC_BT709;
-    w->venc->color_primaries = AVCOL_PRI_BT709;
-    w->venc->color_trc = AVCOL_TRC_BT709;
-    w->venc->color_range = AVCOL_RANGE_MPEG;
-    /* A keyframe every two seconds or so: a phone scrubs the piece well. */
-    w->venc->gop_size = (int)((settings->fps_num * 2 + settings->fps_den - 1) / settings->fps_den);
-    if (global_header) {
-        w->venc->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
+    ret = open_video_encoder(w, vcodec, settings, global_header, 1);
+    if (ret < 0 && ret != AVERROR(ENOMEM) && is_mf(vcodec)) {
+        /* No GPU encoder Media Foundation will use -- a virtual machine,
+         * a GPU without one: Microsoft's software encoder instead, which
+         * writes H.264 only. */
+        avcodec_free_context(&w->venc);
+        ret = open_video_encoder(w, vcodec, settings, global_header, 0);
     }
-    AVDictionary *vopts = NULL;
-    /* The media engine where there is one, the system's own software
-     * encoder where there is not -- a virtual Mac, say. */
-    av_dict_set(&vopts, "allow_sw", "1", 0);
-    ret = avcodec_open2(w->venc, vcodec, &vopts);
-    av_dict_free(&vopts);
     if (ret < 0) {
         set_av_err(err, err_len, "could not open the video encoder", ret);
         writer_free(w);
-        return VB_AV_ERR_UNSUPPORTED;
+        return ret == AVERROR(ENOMEM) ? VB_AV_ERR_DECODE : VB_AV_ERR_UNSUPPORTED;
     }
     w->vst = avformat_new_stream(w->oc, NULL);
     if (!w->vst) {

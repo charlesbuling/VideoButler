@@ -88,15 +88,22 @@ impl Editor {
         }
     }
 
-    /// Where the editor keeps its drafts, per platform.
+    /// The editor's own directory name, under ~/Movies on a Mac and under
+    /// %LOCALAPPDATA% on Windows.
+    fn product_dir(self) -> &'static str {
+        match self {
+            Editor::Jianying => "JianyingPro",
+            Editor::CapCut => "CapCut",
+        }
+    }
+
+    /// Where the editor keeps its drafts, per platform, the folder it reads
+    /// first.
     ///
     /// The folder is the same on both releases apart from the product
     /// directory; `com.lveditor.draft` is the editor's own name for it.
     fn draft_roots(self, home: &Path) -> Vec<PathBuf> {
-        let product = match self {
-            Editor::Jianying => "JianyingPro",
-            Editor::CapCut => "CapCut",
-        };
+        let product = self.product_dir();
         if cfg!(target_os = "macos") {
             vec![
                 home.join("Movies")
@@ -104,12 +111,18 @@ impl Editor {
                     .join("User Data/Projects/com.lveditor.draft"),
             ]
         } else if cfg!(target_os = "windows") {
-            // %LOCALAPPDATA%, which is where the Windows build installs.
-            vec![
-                home.join("AppData/Local")
-                    .join(product)
-                    .join("User Data/Projects/com.lveditor.draft"),
-            ]
+            // %LOCALAPPDATA%, which is where the Windows build installs --
+            // unless the user moved the drafts in its settings (草稿位置),
+            // as 剪映 11.5 on a real machine had: then its drafts go there,
+            // and one written there is indexed at its next start (the
+            // index itself stays in the default folder).
+            let user_data = local_app_data(home).join(product).join("User Data");
+            let mut roots: Vec<PathBuf> =
+                custom_draft_root(&user_data.join("Config").join("globalSetting"))
+                    .into_iter()
+                    .collect();
+            roots.push(user_data.join("Projects").join("com.lveditor.draft"));
+            roots
         } else {
             Vec::new()
         }
@@ -117,7 +130,21 @@ impl Editor {
 
     /// Where the application itself lives, for reporting whether it is
     /// installed and for opening it.
-    fn app_paths(self) -> Vec<PathBuf> {
+    fn app_paths(self, home: &Path) -> Vec<PathBuf> {
+        if cfg!(target_os = "windows") {
+            // The launcher beside the versions installed, which starts the
+            // newest (`Apps\11.5.0.14454\JianyingPro.exe`).
+            let exe = match self {
+                Editor::Jianying => "JianyingPro.exe",
+                Editor::CapCut => "CapCut.exe",
+            };
+            return vec![
+                local_app_data(home)
+                    .join(self.product_dir())
+                    .join("Apps")
+                    .join(exe),
+            ];
+        }
         if !cfg!(target_os = "macos") {
             return Vec::new();
         }
@@ -131,6 +158,36 @@ impl Editor {
             Editor::CapCut => vec![PathBuf::from("/Applications/CapCut.app")],
         }
     }
+}
+
+/// %LOCALAPPDATA% under a Windows home, built from components so the paths
+/// that reach a draft or the screen carry one kind of separator.
+fn local_app_data(home: &Path) -> PathBuf {
+    home.join("AppData").join("Local")
+}
+
+/// The folder a Windows editor's drafts were moved to in its settings,
+/// from its Qt settings file: `currentCustomDraftPath=` under `[General]`,
+/// backslashes doubled and the value quoted when it holds a comma.
+fn custom_draft_root(settings: &Path) -> Option<PathBuf> {
+    let text = std::fs::read_to_string(settings).ok()?;
+    let value = text
+        .lines()
+        .find_map(|line| line.trim().strip_prefix("currentCustomDraftPath="))?
+        .trim();
+    let value = value
+        .strip_prefix('"')
+        .and_then(|v| v.strip_suffix('"'))
+        .unwrap_or(value);
+    let mut path = String::new();
+    let mut chars = value.chars();
+    while let Some(c) = chars.next() {
+        match c {
+            '\\' => path.extend(chars.next()),
+            _ => path.push(c),
+        }
+    }
+    (!path.is_empty()).then(|| PathBuf::from(path))
 }
 
 impl std::fmt::Display for Editor {
@@ -196,7 +253,7 @@ pub fn detect_editors() -> Vec<EditorInstall> {
 }
 
 pub fn detect_editor(editor: Editor, home: &Path) -> EditorInstall {
-    let app_path = editor.app_paths().into_iter().find(|p| p.exists());
+    let app_path = editor.app_paths(home).into_iter().find(|p| p.exists());
     let draft_root = editor
         .draft_roots(home)
         .into_iter()
@@ -252,6 +309,9 @@ pub fn on_phone(editor: Editor, installed_apps: &str) -> EditorInstall {
 /// Through `plutil`, because the plist may be binary, and this only ever runs
 /// on a desktop where spawning a process is fine.
 fn app_version(app: &Path) -> Option<String> {
+    if cfg!(target_os = "windows") {
+        return newest_version_beside(app);
+    }
     if !cfg!(target_os = "macos") {
         return None;
     }
@@ -268,7 +328,54 @@ fn app_version(app: &Path) -> Option<String> {
     (out.status.success() && !version.is_empty()).then_some(version)
 }
 
+/// The newest version installed beside a Windows editor's launcher: each is
+/// a folder named for it holding the editor itself, as
+/// `Apps\11.5.0.14454\JianyingPro.exe`, and older ones stay after an update.
+fn newest_version_beside(launcher: &Path) -> Option<String> {
+    let exe = launcher.file_name()?;
+    std::fs::read_dir(launcher.parent()?)
+        .ok()?
+        .filter_map(Result::ok)
+        .filter(|entry| entry.path().join(exe).is_file())
+        .filter_map(|entry| {
+            let name = entry.file_name().to_string_lossy().to_string();
+            let parts = name
+                .split('.')
+                .map(|part| part.parse::<u64>().ok())
+                .collect::<Option<Vec<u64>>>()?;
+            Some((parts, name))
+        })
+        .max()
+        .map(|(_, name)| name)
+}
+
 fn is_running(app: &Path) -> bool {
+    if cfg!(target_os = "windows") {
+        // The editor runs under the launcher's name from its version folder.
+        // tasklist is a console program, and the app is not: without
+        // CREATE_NO_WINDOW every check would flash a console on screen.
+        let Some(image) = app.file_name().map(|n| n.to_string_lossy().to_lowercase()) else {
+            return false;
+        };
+        let mut tasklist = std::process::Command::new("tasklist");
+        tasklist.args(["/FI", &format!("IMAGENAME eq {image}"), "/FO", "CSV", "/NH"]);
+        #[cfg(windows)]
+        {
+            use std::os::windows::process::CommandExt;
+            const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+            tasklist.creation_flags(CREATE_NO_WINDOW);
+        }
+        // With no match it prints a sentence in the system's language and
+        // code page, which never holds the image name.
+        return tasklist
+            .output()
+            .map(|out| {
+                String::from_utf8_lossy(&out.stdout)
+                    .to_lowercase()
+                    .contains(&format!("\"{image}\""))
+            })
+            .unwrap_or(false);
+    }
     if !cfg!(target_os = "macos") {
         return false;
     }
@@ -302,9 +409,9 @@ impl MediaAccess {
                 // Compared canonically: /tmp is /private/tmp, and a path
                 // through a symlink is where the symlink points, which is
                 // what the sandbox checks.
-                let path = std::fs::canonicalize(path).unwrap_or_else(|_| path.to_path_buf());
+                let path = dunce::canonicalize(path).unwrap_or_else(|_| path.to_path_buf());
                 roots.iter().any(|root| {
-                    let root = std::fs::canonicalize(root).unwrap_or_else(|_| root.clone());
+                    let root = dunce::canonicalize(root).unwrap_or_else(|_| root.clone());
                     path.starts_with(root)
                 })
             }
@@ -2084,6 +2191,60 @@ mod tests {
     }
 
     #[test]
+    fn drafts_moved_in_the_windows_editors_settings_are_found_there() {
+        let dir = std::env::temp_dir().join(format!("vb-jianying-setting-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let settings = dir.join("globalSetting");
+        // As 剪映 11.5 on Windows writes it: Qt's settings format, every
+        // backslash doubled.
+        std::fs::write(
+            &settings,
+            "[General]\nfpsNumerator=30\n\
+             currentCustomDraftPath=K:\\\\Project\\\\JianyingPro Drafts\n\
+             customMaterialPath=K:\\\\Project\\\\JianyingPro Materials\n",
+        )
+        .unwrap();
+        assert_eq!(
+            custom_draft_root(&settings),
+            Some(PathBuf::from(r"K:\Project\JianyingPro Drafts"))
+        );
+        std::fs::write(
+            &settings,
+            "[General]\ncurrentCustomDraftPath=\"D:\\\\a,b\"\n",
+        )
+        .unwrap();
+        assert_eq!(custom_draft_root(&settings), Some(PathBuf::from(r"D:\a,b")));
+        std::fs::write(&settings, "[General]\nfpsNumerator=30\n").unwrap();
+        assert_eq!(custom_draft_root(&settings), None, "never moved");
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn the_newest_version_beside_the_launcher_is_reported() {
+        let apps = std::env::temp_dir().join(format!("vb-jianying-apps-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&apps);
+        for exe in [
+            "JianyingPro.exe",
+            "11.4.0.14410/JianyingPro.exe",
+            "11.5.0.14454/JianyingPro.exe",
+            "11.10.0.1/JianyingPro.exe",
+            "12.0.0.1/uninst.exe",
+            "backup/JianyingPro.exe",
+        ] {
+            let path = apps.join(exe);
+            std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+            std::fs::write(&path, b"").unwrap();
+        }
+        // By number, not by name ("11.10" sorts before "11.5" as text); only
+        // a folder holding the editor counts, and only one named a version.
+        assert_eq!(
+            newest_version_beside(&apps.join("JianyingPro.exe")).as_deref(),
+            Some("11.10.0.1")
+        );
+        let _ = std::fs::remove_dir_all(&apps);
+    }
+
+    #[test]
     fn media_the_editor_may_not_read_is_linked_into_the_draft() {
         // The sandbox case: footage outside ~/Movies. The draft must point at
         // a copy of the path the editor may read, and cost no disk to do it.
@@ -2127,13 +2288,12 @@ mod tests {
             .iter()
             .map(|v| v["path"].as_str().unwrap())
             .collect();
+        // Compared as paths: on Windows one built with `/` in a join and one
+        // the writer built are the same file in different spellings.
         let linked = draft_dir.join("Resources/001-holiday.mp4");
+        assert!(paths.iter().any(|p| Path::new(p) == linked), "{paths:?}");
         assert!(
-            paths.contains(&linked.to_string_lossy().as_ref()),
-            "{paths:?}"
-        );
-        assert!(
-            paths.contains(&inside.to_string_lossy().as_ref()),
+            paths.iter().any(|p| Path::new(p) == inside),
             "a file the editor can already read is referenced where it is: {paths:?}"
         );
         // A link, not a new file: the same bytes, and the original is intact.

@@ -14,9 +14,9 @@
 /// The real app, with the real engine, driven from code.
 ///
 /// Everything else in `test/` runs the UI against a fake engine. This runs
-/// the macOS build with the Rust engine linked in, through the same FFI calls
-/// a user's clicks make: the self-test, a project, a style, a run with
-/// progress, the model library and the video butler.
+/// the macOS or Windows build with the Rust engine in it, through the same
+/// FFI calls a user's clicks make: the self-test, a project, a style, a run
+/// with progress, the model library and the video butler.
 ///
 /// It needs footage, named at build time:
 ///
@@ -24,6 +24,9 @@
 ///     --dart-define=VB_IT_FOOTAGE=/path/to/a/folder \
 ///     --dart-define=VB_IT_MUSIC=/path/to/music.wav \
 ///     --dart-define=VB_IT_PHOTOS=true   # when the folder holds photos too
+///
+/// `-d windows` on Windows, after scripts/build-windows.sh has built the
+/// engine the app's build copies in.
 ///
 /// It writes one project into the real library and deletes it at the end. It
 /// does not export to an editor, so it leaves no draft in 剪映's list.
@@ -193,7 +196,10 @@ void main() {
           reason: 'on the beat a photo is held whole beats');
     }
     await scrollTo(tester, find.text('这一版是怎么做的'));
-    expect(find.textContaining('Apple Vision'), findsWidgets);
+    // Scene labels from the platform's framework on Apple, from SigLIP 2
+    // in the library elsewhere.
+    expect(find.textContaining(Platform.isMacOS || Platform.isIOS ? 'Apple Vision' : 'SigLIP 2'),
+        findsWidgets);
     expect(find.textContaining('Whisper'), findsWidgets,
         reason: 'the speech model downloaded to the library is used');
     expect(find.textContaining('景深、人脸、人像三个模型在本机运行'), findsWidgets,

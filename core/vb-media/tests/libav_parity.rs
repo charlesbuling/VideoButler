@@ -835,11 +835,15 @@ fn sound_read_in_order_matches_the_cli() {
     for tempo in [1.0, 2.0, 0.5] {
         let cli = sound(&FfmpegCli::default(), &input, 1_000_000, 3_000_000, tempo);
         let lib = sound(&LibAv, &input, 1_000_000, 3_000_000, tempo);
-        // Two seconds of footage at that speed, stereo at 48 kHz.
+        // Two seconds of footage at that speed, stereo at 48 kHz, within
+        // 30 ms of footage: atempo holds back the end of a stream -- on
+        // Windows the last 24 ms, through both backends alike -- which
+        // slowed down is that much longer in sound.
         let expected = (2.0 / tempo * 48_000.0 * 2.0) as i64;
+        let margin = (48.0 * 2.0 * 30.0 / tempo.min(1.0)) as i64;
         for (name, s) in [("cli", &cli), ("libav", &lib)] {
             assert!(
-                (s.len() as i64 - expected).abs() < 48 * 2 * 30,
+                (s.len() as i64 - expected).abs() < margin,
                 "{name} at {tempo}x read {} samples, expected about {expected}",
                 s.len()
             );

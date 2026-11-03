@@ -18,12 +18,22 @@ import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 
 import '../l10n/strings.dart';
+import '../models.dart';
+
+/// Whether this platform's player can play a local file: video_player's
+/// own on Android, iOS and the Mac, video_player_win's Media Foundation
+/// player on Windows. The web build cannot open a local file and Linux has
+/// no player, so neither offers playback; the editor steps through the
+/// engine's frames there instead.
+bool get canPlayLocalVideo =>
+    !kIsWeb &&
+    (Platform.isAndroid || Platform.isIOS || Platform.isMacOS || Platform.isWindows);
 
 /// A clip played in the footage picker, so it can be judged before it is
 /// chosen, with the choice one tap away.
 ///
-/// Plays the file where it is, through the platform's own player. The web
-/// build cannot open a local file at all, so there it is never offered.
+/// Plays the file where it is, through the platform's own player. Where
+/// there is none ([canPlayLocalVideo]) it is never offered.
 class VideoPreview extends StatefulWidget {
   const VideoPreview({
     super.key,
@@ -36,7 +46,7 @@ class VideoPreview extends StatefulWidget {
   final bool chosen;
   final VoidCallback onToggle;
 
-  static bool get available => !kIsWeb;
+  static bool get available => canPlayLocalVideo;
 
   /// Show [path] playing; `onToggle` chooses or unchooses it.
   static Future<void> show(
@@ -165,7 +175,7 @@ class _VideoPreviewState extends State<VideoPreview> {
                     child: Text(
                       ready
                           ? '${_clock(value.position)} / ${_clock(value.duration)}'
-                          : widget.path.split(Platform.pathSeparator).last,
+                          : fileNameOf(widget.path),
                       style: theme.textTheme.bodyMedium,
                       overflow: TextOverflow.ellipsis,
                     ),

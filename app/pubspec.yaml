@@ -29,6 +29,7 @@ dependencies:
   # the Mac, built through Swift Package Manager there (below), so no
   # CocoaPods.
   video_player: ^2.14.0
+  video_player_win: ^3.3.0
   # iOS only: an iPhone's videos and photos are in its photo library, which
   # the engine's own picker cannot see from inside the app's sandbox. The
   # Flutter team's plugin, BSD-3; picks are copied into the app's Documents.

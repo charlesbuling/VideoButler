@@ -361,9 +361,9 @@ mod tests {
 
     #[test]
     fn query_parameters_are_decoded() {
-        let (path, params) = split_query("/api/browse?dir=%2FUsers%2Fme%2FMy%20Movies");
+        let (path, params) = split_query("/api/browse?dir=%2FUsers%2Fzhou%2FMy%20Movies");
         assert_eq!(path, "/api/browse");
-        assert_eq!(params["dir"], "/Users/me/My Movies");
+        assert_eq!(params["dir"], "/Users/zhou/My Movies");
     }
 
     #[test]
@@ -464,7 +464,13 @@ mod tests {
         let root = fixture_root("symlink");
         let outside = root.parent().unwrap().join("secret.txt");
         let link = root.join("sneaky.txt");
-        if std::os::unix::fs::symlink(&outside, &link).is_ok() {
+        #[cfg(unix)]
+        let linked = std::os::unix::fs::symlink(&outside, &link);
+        // Windows lets a process make a link only in Developer Mode or as an
+        // administrator; without either there is nothing to check.
+        #[cfg(windows)]
+        let linked = std::os::windows::fs::symlink_file(&outside, &link);
+        if linked.is_ok() {
             assert!(resolve_static_path(&root, "/sneaky.txt").is_none());
         }
     }

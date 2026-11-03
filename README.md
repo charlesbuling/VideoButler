@@ -8,7 +8,7 @@
 
 [![License: AGPL-3.0-or-later](https://img.shields.io/badge/license-AGPL--3.0--or--later-blue.svg)](LICENSE)
 [![Release v0.2.0](https://img.shields.io/badge/release-v0.2.0-green.svg)](https://github.com/charlesbuling/VideoButler/releases/tag/v0.2.0)
-[![Platforms](https://img.shields.io/badge/platform-macOS%20%7C%20iOS%20%7C%20Android%20%7C%20Linux-lightgrey.svg)](https://github.com/charlesbuling/VideoButler/releases/tag/v0.2.0)
+[![Platforms](https://img.shields.io/badge/platform-macOS%20%7C%20Windows%20%7C%20iOS%20%7C%20Android%20%7C%20Linux-lightgrey.svg)](https://github.com/charlesbuling/VideoButler/releases/tag/v0.2.0)
 
 中文 | [English](README_en.md)
 
@@ -71,7 +71,7 @@ AI 不交出一条已经压扁的成片当作唯一结果。它交出一份剪�
 | iOS | 模拟器能跑。设备构建能链接，未签名。没有 ONNX Runtime 和 llama.cpp |
 | Android | arm64 APK，模拟器和实机跑过。Release 用调试密钥签名 |
 | Linux | 只能在 Linux 上编出应用。引擎可以从 Mac 交叉编译。应用还没有实际跑过 |
-| Windows | **不在本仓库的 0.2.0 里。** 应用在 `charlesbuling/VideoBulter-windows`，分支 `windows` |
+| Windows | **0.2.0 已提供** x64 安装包（见下方 Release）。源码与 `WINDOWS.md`、`scripts/build-windows.sh` / `package-windows.sh` 在本仓库 |
 
 ---
 
@@ -104,7 +104,7 @@ AI 不交出一条已经压扁的成片当作唯一结果。它交出一份剪�
 
 模型不作为 Release 资产发布，而是从各自的 Hugging Face 官方地址下载，见下面「模型文件从哪里下载」。
 
-没有 Windows 安装包。Windows 不在这次发布里。
+Windows x64：`VideoButler-0.2.0-windows-x64.zip`（约 31 MB，不含模型；模型经 Hugging Face / `scripts/fetch-models.sh`）。
 
 仓库公开、Release 挂上之前，这些 URL 不存在。那时请从源码构建。
 
@@ -300,7 +300,16 @@ sudo apt install clang cmake ninja-build pkg-config libgtk-3-dev
 
 ## Windows
 
-不在这次发布里。应用的开发和打包在 `charlesbuling/VideoBulter-windows`（分支 `windows`）。本仓库的 `scripts/build-windows.sh` 可以从 Mac 或 Linux 交叉编译引擎，不能在非 Windows 上编出应用。
+0.2.0 起 Windows x64 应用与本仓库一并发布。在 Windows 上用 Git Bash：
+
+```bash
+./scripts/build-windows.sh
+./scripts/package-windows.sh --no-build
+```
+
+说明见 `WINDOWS.md`（工具链、MSYS2 编 ffmpeg、ONNX Runtime、剪映路径等）。安装包是 Release 目录的 zip：`video_butler.exe` 与旁边的 `vb_ffi.dll`、`vb_llama_engine.dll`、ONNX Runtime 与 LGPL ffmpeg DLL。模型不打进包，用 `scripts/fetch-models.sh` 或应用内「模型」页从 Hugging Face 下载。
+
+历史私有仓库 `charlesbuling/VideoBulter-windows` 仅作开发参考；请以本仓库为准。
 
 ---
 

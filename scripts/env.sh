@@ -68,3 +68,40 @@ for _brew_bin in /opt/homebrew/bin /usr/local/bin; do
   fi
 done
 unset _brew_bin
+# Windows (Git Bash): cargo wherever CARGO_HOME puts it, and Visual Studio's
+# own CMake (whisper.cpp, llama.cpp) and libclang (their bindings) through
+# vswhere, so a plain Git Bash builds as a Developer PowerShell does. The
+# libclang is the "C++ Clang Compiler" component's; an LLVM install set in
+# LIBCLANG_PATH wins.
+case "$(uname -s)" in
+  MINGW* | MSYS* | CYGWIN*)
+    if [ -n "${CARGO_HOME:-}" ]; then
+      export PATH="$(cygpath -u "$CARGO_HOME")/bin:$PATH"
+    fi
+    _vswhere="/c/Program Files (x86)/Microsoft Visual Studio/Installer/vswhere.exe"
+    if [ -x "$_vswhere" ]; then
+      _vs="$("$_vswhere" -latest -products '*' -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 \
+        -property installationPath | tr -d '\r')"
+      if [ -n "$_vs" ]; then
+        _cmake="$(cygpath -u "$_vs")/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/bin"
+        if ! command -v cmake > /dev/null && [ -x "$_cmake/cmake.exe" ]; then
+          export PATH="$_cmake:$PATH"
+        fi
+        if [ -z "${LIBCLANG_PATH:-}" ] && [ -f "$_vs/VC/Tools/Llvm/x64/bin/libclang.dll" ]; then
+          export LIBCLANG_PATH="$_vs\\VC\\Tools\\Llvm\\x64\\bin"
+        fi
+      fi
+    fi
+    unset _vswhere _vs _cmake
+    # cmake-rs replaces CMake's own Release flags on MSVC with cc's, which
+    # carry no optimisation (rust-lang/cmake-rs#240): whisper.cpp came out
+    # unoptimised, 30 s of speech taking 124 s. llama-cpp-sys-2 puts the
+    # flags back itself; whisper-rs-sys passes any CMAKE_* through. -EHsc
+    # because the replaced flags dropped C++'s unwinding too. Written with
+    # `-`, which cl takes as it takes `/`: Git Bash rewrites a leading
+    # `/O2` into a path under its own install as it starts cargo. A build
+    # made without these keeps them out until `cargo clean -p whisper-rs-sys`.
+    export CMAKE_C_FLAGS_RELEASE="-O2 -Ob2 -DNDEBUG"
+    export CMAKE_CXX_FLAGS_RELEASE="-O2 -Ob2 -DNDEBUG -EHsc"
+    ;;
+esac

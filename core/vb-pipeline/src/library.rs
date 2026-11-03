@@ -147,7 +147,9 @@ pub fn default_root() -> PathBuf {
     if cfg!(target_vendor = "apple") {
         home.join("Library/Application Support/VideoButler")
     } else if cfg!(target_os = "windows") {
-        home.join("AppData/Roaming/VideoButler")
+        // By components: the path is shown and written into drafts, and a
+        // `/` joined in would be the one forward slash in it.
+        home.join("AppData").join("Roaming").join("VideoButler")
     } else {
         std::env::var_os("XDG_DATA_HOME")
             .filter(|v| !v.is_empty())

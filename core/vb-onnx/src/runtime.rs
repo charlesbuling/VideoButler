@@ -44,12 +44,12 @@ fn candidates() -> Vec<PathBuf> {
         out.push(dir.join(FILE));
         out.push(dir.join("../Frameworks").join(FILE));
     }
-    // A developer's checkout, after scripts/build-onnxruntime-macos.sh.
-    out.push(
-        Path::new(env!("CARGO_MANIFEST_DIR"))
-            .join("../../build/onnxruntime-macos/current/lib")
-            .join(FILE),
-    );
+    // A developer's checkout, after scripts/build-onnxruntime-macos.sh or
+    // scripts/fetch-onnxruntime-windows.sh. On Windows always by full path:
+    // System32 holds an older onnxruntime.dll of Windows ML's own.
+    let build = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../build");
+    out.push(build.join("onnxruntime-macos/current/lib").join(FILE));
+    out.push(build.join("onnxruntime-windows/current/lib").join(FILE));
     for dir in ["/opt/homebrew/lib", "/usr/local/lib"] {
         out.push(Path::new(dir).join(FILE));
     }

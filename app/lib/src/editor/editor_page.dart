@@ -234,7 +234,12 @@ class _EditorPageState extends State<EditorPage> {
     }
     final from = _playhead >= state.totalUs - 1000 ? 0 : _playhead;
     if (widget.livePlayback && EditPlayer.available) {
-      final player = _player ??= EditPlayer(state)..addListener(_playerMoved);
+      // Photographs drawn by the engine at a size the preview cannot
+      // outgrow, as the picker draws them.
+      final player = _player ??= EditPlayer(
+        state,
+        drawStills: (paths) => widget.engine.thumbnails(paths, width: 1280),
+      )..addListener(_playerMoved);
       player.state = state;
       player.play(from);
     } else {

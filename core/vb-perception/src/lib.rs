@@ -305,7 +305,7 @@ impl<'a> Perception<'a> {
         // this, and a relative path there produces a URL that resolves only
         // from the directory the pipeline happened to be run in -- which is
         // never the directory the editor opens the draft from.
-        let absolute = std::fs::canonicalize(path).unwrap_or_else(|_| path.to_path_buf());
+        let absolute = dunce::canonicalize(path).unwrap_or_else(|_| path.to_path_buf());
 
         graph.sources.push(Source {
             id: source_id.clone(),
@@ -630,7 +630,7 @@ impl<'a> Perception<'a> {
             })?,
         };
         let source_id = "src-0001".to_string();
-        let absolute = std::fs::canonicalize(path).unwrap_or_else(|_| path.to_path_buf());
+        let absolute = dunce::canonicalize(path).unwrap_or_else(|_| path.to_path_buf());
         let mut graph = FootageGraph::new(project_id);
         graph.sources.push(Source {
             id: source_id.clone(),

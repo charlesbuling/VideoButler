@@ -99,7 +99,7 @@ class ResultView extends StatelessWidget {
       s.handOffBody(handoff.clips.length, editor.name),
       s.handOffLeftOut(handoff.titleCards, handoff.texts, handoff.transitions),
       if (music != null)
-        s.handOffMusic(music.split('/').last, formatDuration(handoff.musicInUs ?? 0)),
+        s.handOffMusic(fileNameOf(music), formatDuration(handoff.musicInUs ?? 0)),
     ].where((line) => line.isNotEmpty);
     return SectionCard(
       title: s.handOffTitle(editor.name),

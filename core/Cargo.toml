@@ -15,6 +15,12 @@ authors = ["zhengkuang <217010072@link.cuhk.edu.cn>"]
 repository = "https://github.com/charlesbuling/VideoButler"
 
 [workspace.dependencies]
+
+# std's canonicalize, without the verbatim prefix it puts on every Windows
+# path (`\\?\C:\...`), which a path stored in a graph, shown to a person or
+# written into a draft must not carry. Elsewhere it is std's own.
+# CC0-1.0 OR MIT-0 OR Apache-2.0, no dependencies.
+dunce = "1"
 # Versioned as well as pathed: a bare path dependency is a wildcard version,
 # which cargo-deny rejects.
 vb-contracts = { path = "vb-contracts", version = "0.2.0" }

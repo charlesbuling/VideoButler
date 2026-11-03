@@ -77,10 +77,19 @@ pub enum ExportError {
 /// Only the characters that would break a URL are escaped; a path with a space
 /// or a hash in it is ordinary on every platform this ships to and must not
 /// produce a draft that silently points at nothing.
+///
+/// On Windows a path is a drive or a share and backslashes (RFC 8089):
+/// `C:\a b.mp4` is `file:///C:/a%20b.mp4` and `\\host\share\a.mp4` is
+/// `file://host/share/a.mp4`. The verbatim prefix `canonicalize` puts on a
+/// path (`\\?\C:\`, `\\?\UNC\host\`) is no part of either.
 pub fn file_url(path: &Path) -> String {
     let raw = path.to_string_lossy();
-    let mut out = String::from("file://");
-    for byte in raw.bytes() {
+    let (mut out, rest) = if cfg!(windows) {
+        windows_url_parts(&raw)
+    } else {
+        ("file://".to_string(), raw.into_owned())
+    };
+    for byte in rest.bytes() {
         match byte {
             b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'.' | b'_' | b'~' | b'/' => {
                 out.push(byte as char)
@@ -91,6 +100,29 @@ pub fn file_url(path: &Path) -> String {
     out
 }
 
+/// A Windows path as the start of its URL -- scheme, authority and drive,
+/// written as they are -- and the rest, slashed, to be escaped.
+fn windows_url_parts(raw: &str) -> (String, String) {
+    let slashed = raw.replace('\\', "/");
+    let plain = match slashed.strip_prefix("//?/UNC/") {
+        Some(share) => format!("//{share}"),
+        None => slashed
+            .strip_prefix("//?/")
+            .map(str::to_string)
+            .unwrap_or(slashed),
+    };
+    if let Some(share) = plain.strip_prefix("//") {
+        // The host is the URL's authority.
+        let (host, rest) = share.split_at(share.find('/').unwrap_or(share.len()));
+        return (format!("file://{host}"), rest.to_string());
+    }
+    let drive = plain.as_bytes();
+    if drive.len() >= 2 && drive[0].is_ascii_alphabetic() && drive[1] == b':' {
+        return (format!("file:///{}", &plain[..2]), plain[2..].to_string());
+    }
+    ("file://".to_string(), plain)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -98,8 +130,8 @@ mod tests {
     #[test]
     fn a_plain_path_becomes_a_file_url() {
         assert_eq!(
-            file_url(Path::new("/Users/me/a.mp4")),
-            "file:///Users/me/a.mp4"
+            file_url(Path::new("/Users/zhou/a.mp4")),
+            "file:///Users/zhou/a.mp4"
         );
     }
 
@@ -117,5 +149,32 @@ mod tests {
         assert!(url.starts_with("file:///tmp/"));
         assert!(url.contains('%'));
         assert!(url.ends_with(".mp4"));
+    }
+
+    #[test]
+    fn windows_drives_and_shares_are_written_as_rfc_8089_says() {
+        // Not behind cfg(windows): the parts are plain string work, and a Mac
+        // build should catch a change to them too.
+        let url = |p: &str| {
+            let (start, rest) = windows_url_parts(p);
+            format!("{start}{rest}")
+        };
+        assert_eq!(url(r"C:\Users\zhou\a.mp4"), "file:///C:/Users/zhou/a.mp4");
+        assert_eq!(url(r"\\?\K:\Videos\a.mp4"), "file:///K:/Videos/a.mp4");
+        assert_eq!(url(r"\\nas\share\a.mp4"), "file://nas/share/a.mp4");
+        assert_eq!(url(r"\\?\UNC\nas\share\a.mp4"), "file://nas/share/a.mp4");
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn a_windows_path_with_a_space_becomes_a_file_url() {
+        assert_eq!(
+            file_url(Path::new(r"C:\Users\zhou\my clip #2.mp4")),
+            "file:///C:/Users/zhou/my%20clip%20%232.mp4"
+        );
+        assert_eq!(
+            file_url(Path::new(r"\\?\K:\旅行\a.mp4")),
+            "file:///K:/%E6%97%85%E8%A1%8C/a.mp4"
+        );
     }
 }

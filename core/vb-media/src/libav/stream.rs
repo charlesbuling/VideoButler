@@ -21,6 +21,7 @@ use crate::MediaError;
 use crate::backend::{EncodeSettings, Encoder, FrameReader, SampleReader, VideoCodec, VideoFrame};
 use std::ffi::{c_char, c_int};
 use std::path::{Path, PathBuf};
+use std::sync::OnceLock;
 use vb_contracts::Micros;
 
 #[repr(C)]
@@ -392,8 +393,15 @@ impl LibAv {
     }
 
     pub(super) fn can_write(&self, codec: VideoCodec) -> bool {
-        // SAFETY: no pointers; asks the linked library what it carries.
-        unsafe { vb_av_can_encode(i32::from(codec == VideoCodec::Hevc)) != 0 }
+        // Asked once per codec: on Windows the answer opens an encoder, and
+        // the editor asks with every state it sends.
+        static CAN: [OnceLock<bool>; 2] = [OnceLock::new(), OnceLock::new()];
+        let hevc = codec == VideoCodec::Hevc;
+        *CAN[usize::from(hevc)].get_or_init(|| {
+            // SAFETY: no pointers; asks the linked library what it carries
+            // and whether the machine opens it.
+            unsafe { vb_av_can_encode(i32::from(hevc)) != 0 }
+        })
     }
 
     pub(super) fn open_encoder(

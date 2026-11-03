@@ -13,25 +13,37 @@
 # GNU Affero General Public License for more details.
 
 # Build an LGPL ffmpeg for Linux or Windows, for the linked-libav backend,
-# from macOS or Linux, with Zig as the C toolchain.
+# from macOS, Linux or Windows (MSYS2, for its make), with Zig as the C
+# toolchain.
 #
 # The desktop apps for Linux and Windows carry their own ffmpeg as the Mac
 # app does: a distribution's ffmpeg is usually a GPL build, and Windows has
-# none. Zig compiles for either from anywhere, so this one script runs the
-# same on the development Mac and on Linux, and the two cannot build
-# different things.
+# none. Zig compiles for either from anywhere, so this one script runs on
+# the development Mac, the Windows machine and the CI runners alike, and
+# they cannot build different things.
 #
 # The components are the other builds' exactly, and a build whose configure
-# came out GPL or nonfree is refused. There is no hardware decoder in these
-# yet (VA-API on Linux, D3D11 on Windows): footage decodes in software there.
+# came out GPL or nonfree is refused. Windows adds what VideoToolbox is on
+# the Mac: Media Foundation's encoders for the editor's export and D3D11
+# decoding, both system libraries. There is no hardware decoder on Linux
+# yet (VA-API): footage decodes in software there.
 #
 # Out: build/ffmpeg-<target>/<version>/{include,lib,bin} and a `current`
-# link beside it. Shared libraries: .so on Linux; on Windows .dll in bin/
+# link beside it -- a copy on a Windows host, where git carries the build
+# (WINDOWS.md). Shared libraries: .so on Linux; on Windows .dll in bin/
 # with import libraries in lib/.
 #
 # Usage: scripts/build-ffmpeg-cross.sh <linux-x86_64|linux-aarch64|windows-x86_64>
 #        scripts/build-ffmpeg-cross.sh <target> --env
+#
+# x86_64 targets need nasm. On Windows, from an MSYS2 shell (Git Bash has
+# no make), with Zig on PATH and `pacman -S make diffutils binutils gcc
+# nasm` -- gcc only for configure's host compiler, which builds nothing
+# that ships.
 set -euo pipefail
+# The DLLs' export lists are sorted, and sort orders by locale: an MSYS2
+# shell put av_pkt_dump_log2 before av_pkt_dump2, where the Mac did not.
+export LC_ALL=C
 
 cd "$(dirname "$0")/.."
 
@@ -82,11 +94,58 @@ COMPONENTS=(
   --enable-zlib
 )
 
-CONFIG_ID="$(printf '%s\n' "${COMPONENTS[@]}" "$ZIG_TARGET" | shasum | cut -c1-12)"
+# Windows' own video hardware, as the Mac build has VideoToolbox: D3D11
+# decoding (the shim falls back to software for a stream it will not take)
+# and Media Foundation's encoders for the editor's export -- the GPU's
+# where there is one, Microsoft's software H.264 otherwise. Both are system
+# libraries, LGPL-compatible; x264 and x265 are GPL and never in this build.
+HWACCEL=()
+if [ "$OS" = "mingw32" ]; then
+  HWACCEL=(
+    --enable-d3d11va
+    --enable-hwaccel=h264_d3d11va,h264_d3d11va2,hevc_d3d11va,hevc_d3d11va2
+    --enable-mediafoundation
+    --enable-encoder=h264_mf,hevc_mf
+  )
+fi
+
+# x86's SIMD -- the decoders', and the scaler's that every frame the
+# engine reads goes through -- is written for nasm. Without it the C
+# fallbacks run, slower, and round differently from every other ffmpeg on
+# the machine. Arm's is assembled by the C compiler and needs nothing.
+ASM=()
+if [ "$ARCH" = "x86_64" ]; then
+  command -v nasm > /dev/null ||
+    { echo "nasm is needed for $TARGET: brew install nasm, apt install nasm, or pacman -S nasm" >&2; exit 1; }
+  ASM=(--x86asmexe=nasm)
+fi
+
+# shasum is Perl's, and MSYS2 has sha1sum and sha256sum instead; both
+# print the digest first.
+sha() {
+  if command -v shasum > /dev/null; then shasum -a "$@"; else "sha$1sum" "${@:2}"; fi
+}
+
+# The link where links work. On a Windows host git carries the build itself
+# rather than a link to it (WINDOWS.md), so `current` is a copy.
+link_current() {
+  case "$(uname -s)" in
+    MINGW* | MSYS* | CYGWIN*) rm -rf "$CURRENT" && cp -R "$PREFIX" "$CURRENT" ;;
+    *) ln -sfn "$FFMPEG_VERSION" "$CURRENT" ;;
+  esac
+}
+
+CONFIG_ID="$(printf '%s\n' "${COMPONENTS[@]}" ${HWACCEL[@]+"${HWACCEL[@]}"} ${ASM[@]+"${ASM[@]}"} \
+  "$ZIG_TARGET" | sha 1 | cut -c1-12)"
 if [ -f "$PREFIX/.config-id" ] && [ "$(cat "$PREFIX/.config-id")" = "$CONFIG_ID" ]; then
-  ln -sfn "$FFMPEG_VERSION" "$CURRENT"
+  link_current
   echo "LGPL ffmpeg $FFMPEG_VERSION for $TARGET: already built"
   echo "  $PREFIX"
+  exit 0
+fi
+if [ -f "$CURRENT/.config-id" ] && [ "$(cat "$CURRENT/.config-id")" = "$CONFIG_ID" ]; then
+  echo "LGPL ffmpeg $FFMPEG_VERSION for $TARGET: already built"
+  echo "  $CURRENT"
   exit 0
 fi
 rm -rf "$PREFIX"
@@ -96,11 +155,13 @@ fetch() {
   mkdir -p "$SRC_DIR"
   if [ ! -f "$file" ]; then
     echo "Downloading $(basename "$file")"
-    curl -fsSL --retry 5 -o "$file.part" "$url"
+    # Every error retried: a TLS handshake cut off is not one curl counts
+    # as transient, and on some networks it is the usual failure.
+    curl -fsSL --retry 5 --retry-all-errors -o "$file.part" "$url"
     mv "$file.part" "$file"
   fi
   local actual
-  actual="$(shasum -a 256 "$file" | cut -d' ' -f1)"
+  actual="$(sha 256 "$file" | cut -d' ' -f1)"
   if [ "$actual" != "$sha" ]; then
     echo "Checksum mismatch for $file: expected $sha, got $actual" >&2
     exit 1
@@ -179,7 +240,7 @@ tar -xf "$SRC_DIR/ffmpeg-$FFMPEG_VERSION.tar.xz" -C "$work/ffmpeg" --strip-compo
     --pkg-config=false \
     --extra-cflags="-I$work/zlib/include" \
     --extra-ldflags="-L$work/zlib/lib" \
-    --disable-x86asm \
+    ${ASM[@]+"${ASM[@]}"} \
     --enable-shared \
     --disable-static \
     --enable-pic \
@@ -191,6 +252,7 @@ tar -xf "$SRC_DIR/ffmpeg-$FFMPEG_VERSION.tar.xz" -C "$work/ffmpeg" --strip-compo
     --disable-debug \
     --disable-everything \
     "${COMPONENTS[@]}" \
+    ${HWACCEL[@]+"${HWACCEL[@]}"} \
     > "$work/configure.log" 2>&1 || {
       tail -20 "$work/configure.log" >&2
       echo "configure failed; full log at $work/configure.log" >&2
@@ -210,6 +272,21 @@ tar -xf "$SRC_DIR/ffmpeg-$FFMPEG_VERSION.tar.xz" -C "$work/ffmpeg" --strip-compo
     echo "configure left out zlib, which PNG needs; refusing to continue" >&2
     exit 1
   fi
+  if [ "$ARCH" = "x86_64" ] && ! grep -q '^#define HAVE_X86ASM 1' config.h; then
+    echo "configure left out x86 assembly; refusing to continue" >&2
+    exit 1
+  fi
+  # A Windows build that silently lost the hardware decoder, or the encoder
+  # the editor's export needs, says nothing until a user waits or fails.
+  if [ "$OS" = "mingw32" ]; then
+    for component in H264_D3D11VA2_HWACCEL HEVC_D3D11VA2_HWACCEL H264_MF_ENCODER \
+      HEVC_MF_ENCODER AAC_ENCODER MP4_MUXER ATEMPO_FILTER; do
+      if ! grep -q "^#define CONFIG_$component 1" config_components.h; then
+        echo "configure left out $component; refusing to continue" >&2
+        exit 1
+      fi
+    done
+  fi
   make -j"$JOBS" DLLTOOL="$TOOLS/dlltool" > "$work/make.log" 2>&1 || {
     tail -20 "$work/make.log" >&2
     echo "make failed; full log at $work/make.log" >&2
@@ -225,7 +302,7 @@ if [ "$OS" = "mingw32" ]; then
 fi
 
 echo "$CONFIG_ID" > "$PREFIX/.config-id"
-ln -sfn "$FFMPEG_VERSION" "$CURRENT"
+link_current
 
 echo
 echo "LGPL ffmpeg $FFMPEG_VERSION for $TARGET:"

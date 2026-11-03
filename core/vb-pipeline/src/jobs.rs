@@ -253,6 +253,8 @@ where
                 "render" => "Video Butler is exporting a video",
                 _ => "Video Butler is analysing footage",
             });
+            #[cfg(windows)]
+            let _awake_here = windows_awake::hold();
             // A panic in the work must become a failed job, not a dead
             // process: this thread is inside the user's app.
             let outcome = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| work(&worker)));
@@ -337,6 +339,39 @@ fn new_id() -> String {
         "job-{stamp:013}-{:04}",
         NEXT.fetch_add(1, Ordering::Relaxed)
     )
+}
+
+
+/// What `vb_apple::power::keep_awake` is on a Mac, for Windows: while held,
+/// the machine does not sleep for want of input -- a desktop sleeps after
+/// half an hour of none by default, and a run left alone would stop with
+/// it. The screen may still turn off. It holds for the calling thread, the
+/// job's, until dropped there.
+#[cfg(windows)]
+mod windows_awake {
+    const ES_CONTINUOUS: u32 = 0x8000_0000;
+    const ES_SYSTEM_REQUIRED: u32 = 0x0000_0001;
+
+    #[link(name = "kernel32")]
+    unsafe extern "system" {
+        fn SetThreadExecutionState(flags: u32) -> u32;
+    }
+
+    pub struct Awake;
+
+    pub fn hold() -> Awake {
+        // SAFETY: flags only; it changes the calling thread's state.
+        unsafe { SetThreadExecutionState(ES_CONTINUOUS | ES_SYSTEM_REQUIRED) };
+        Awake
+    }
+
+    impl Drop for Awake {
+        fn drop(&mut self) {
+            // SAFETY: as above, on the same thread: back to the system's
+            // own idle timers.
+            unsafe { SetThreadExecutionState(ES_CONTINUOUS) };
+        }
+    }
 }
 
 #[cfg(test)]

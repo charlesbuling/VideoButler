@@ -8,7 +8,7 @@ On-device AI video auto-editing. A draft you keep editing.
 
 [![License: AGPL-3.0-or-later](https://img.shields.io/badge/license-AGPL--3.0--or--later-blue.svg)](LICENSE)
 [![Release v0.2.0](https://img.shields.io/badge/release-v0.2.0-green.svg)](https://github.com/charlesbuling/VideoButler/releases/tag/v0.2.0)
-[![Platforms](https://img.shields.io/badge/platform-macOS%20%7C%20iOS%20%7C%20Android%20%7C%20Linux-lightgrey.svg)](https://github.com/charlesbuling/VideoButler/releases/tag/v0.2.0)
+[![Platforms](https://img.shields.io/badge/platform-macOS%20%7C%20Windows%20%7C%20iOS%20%7C%20Android%20%7C%20Linux-lightgrey.svg)](https://github.com/charlesbuling/VideoButler/releases/tag/v0.2.0)
 
 [中文](README.md) | English
 
@@ -71,7 +71,7 @@ Version **0.2.0** (`core/Cargo.toml` and `app/pubspec.yaml` match).
 | iOS | runs in the simulator. The device build links and is unsigned. No ONNX Runtime and no llama.cpp |
 | Android | arm64 APK, run on an emulator and on phones. The release build is signed with the debug key |
 | Linux | the app builds only on Linux. The engine cross-builds from a Mac. The app has never been run |
-| Windows | **Not part of the 0.2.0 release of this repository.** The app is `charlesbuling/VideoBulter-windows`, branch `windows` |
+| Windows | **Included in 0.2.0** as an x64 zip (see Release below). Source, `WINDOWS.md`, and `scripts/build-windows.sh` / `package-windows.sh` live in this repo |
 
 ---
 
@@ -104,7 +104,7 @@ Installers are produced in `dist/`, which Git ignores. After they are published,
 
 Models are not Release assets. They download from each model's official Hugging Face URL; see "Where model files come from" below.
 
-There is no Windows installer. Windows is not part of this release.
+Windows x64: `VideoButler-0.2.0-windows-x64.zip` (~31 MB, no models; get models from Hugging Face / `scripts/fetch-models.sh`).
 
 Until the repository is public and the Release exists, these URLs do not resolve. Build from source.
 
@@ -307,7 +307,16 @@ On a Mac the same script only cross-builds the engine (Zig). Flutter cannot buil
 
 ## Windows
 
-Not part of this release. The app is developed and packaged in `charlesbuling/VideoBulter-windows` (branch `windows`). `scripts/build-windows.sh` in this repo can cross-build the engine from a Mac or from Linux. It cannot build the Windows app anywhere but on Windows.
+From 0.2.0 the Windows x64 app ships from this repository. On Windows, in Git Bash:
+
+```bash
+./scripts/build-windows.sh
+./scripts/package-windows.sh --no-build
+```
+
+See `WINDOWS.md` (toolchain, MSYS2 ffmpeg, ONNX Runtime, 剪映 paths). The installer zip is the Release folder: `video_butler.exe` beside `vb_ffi.dll`, `vb_llama_engine.dll`, ONNX Runtime and LGPL ffmpeg DLLs. Models are not bundled — use `scripts/fetch-models.sh` or the in-app Models page (Hugging Face).
+
+The older private `charlesbuling/VideoBulter-windows` repo is historical; this repository is the source of truth.
 
 ---
 

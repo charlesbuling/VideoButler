@@ -15,7 +15,8 @@
 ///
 /// The exported video is drawn by the engine, frame by frame; that is too
 /// slow to watch as it plays, so while the editor plays, each clip's file
-/// is played by the platform (AVFoundation on Apple, ExoPlayer on Android),
+/// is played by the platform (AVFoundation on Apple, ExoPlayer on Android,
+/// Media Foundation on Windows),
 /// started at the right moment of its footage and at its speed, prepared a
 /// couple of seconds before it is due, and laid out by [picture_rules] --
 /// the renderer's own rules. The music plays under it with its fades. When
@@ -28,12 +29,13 @@ library;
 import 'dart:async';
 import 'dart:io';
 import 'dart:math' as math;
+import 'dart:typed_data';
 import 'dart:ui' as ui;
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 
+import '../ui/video_preview.dart' show canPlayLocalVideo;
 import 'edit_state.dart';
 import 'picture_rules.dart';
 
@@ -71,11 +73,18 @@ class _SoundPlayer {
 
 /// The cut, playing.
 class EditPlayer extends ChangeNotifier {
-  EditPlayer(this._state);
+  EditPlayer(this._state, {this.drawStills});
 
-  /// Whether this platform can play footage live. The web build cannot
-  /// open a local file; it steps through the engine's frames instead.
-  static bool get available => !kIsWeb;
+  /// Whether this platform can play footage live. Where it cannot (the
+  /// web build, Linux) the editor steps through the engine's frames.
+  static bool get available => canPlayLocalVideo;
+
+  /// The engine's pictures of photographs, by path: upright by their EXIF
+  /// and decoded whatever their format, so a photo plays as it exports --
+  /// Flutter reads no HEIC off Apple's platforms, which put an iPhone's
+  /// photos in a Windows cut as exceptions. Without it a photo is read by
+  /// Flutter from its file.
+  final Future<Map<String, Uint8List>> Function(List<String> paths)? drawStills;
 
   EditState _state;
   final Stopwatch _clock = Stopwatch();
@@ -83,6 +92,8 @@ class EditPlayer extends ChangeNotifier {
   Timer? _ticker;
   final Map<String, _ClipPlayer> _clips = {};
   final Map<String, _SoundPlayer> _sounds = {};
+  final Map<String, Uint8List> _stills = {};
+  final Set<String> _stillsAsked = {};
   bool _disposed = false;
 
   EditState get state => _state;
@@ -205,6 +216,9 @@ class EditPlayer extends ChangeNotifier {
       return;
     }
     final source = clip.sourceId == null ? null : _state.sources[clip.sourceId];
+    if (clip.isClip && source != null && source.isImage && source.exists) {
+      _askStill(source.path);
+    }
     if (!clip.isClip || source == null || source.isImage || !source.exists) {
       _clips[clip.id] = _ClipPlayer(clip, null)..ready = true;
       return;
@@ -299,6 +313,30 @@ class EditPlayer extends ChangeNotifier {
     return p != null && p.ready && !p.failed ? p.controller : null;
   }
 
+  /// Whether photographs come from the engine ([drawStills]).
+  bool get drawsStills => drawStills != null;
+
+  /// The engine's picture of the photograph at [path], once it has come.
+  Uint8List? stillFor(String path) => _stills[path];
+
+  /// Ask the engine for a photograph's picture, once: it is asked with the
+  /// clip's opening, ahead of when it shows, and kept for the session.
+  void _askStill(String path) {
+    final draw = drawStills;
+    if (draw == null || !_stillsAsked.add(path)) return;
+    unawaited(() async {
+      try {
+        final made = await draw([path]);
+        final picture = made[path];
+        if (picture != null) _stills[path] = picture;
+      } catch (_) {
+        // No picture: the clip shows black while it plays, and the
+        // engine's frame when stopped, as for footage that will not open.
+      }
+      if (!_disposed) notifyListeners();
+    }());
+  }
+
   Future<void> _releaseAll() async {
     final clips = _clips.values.toList();
     final sounds = _sounds.values.toList();
@@ -373,7 +411,11 @@ class LivePicture extends StatelessWidget {
     if (!clip.isClip || source == null) return const ColoredBox(color: Colors.black);
     final pictureSize = Size(source.width.toDouble(), source.height.toDouble());
     final Widget picture;
-    if (source.isImage) {
+    if (source.isImage && player.drawsStills) {
+      final still = player.stillFor(source.path);
+      if (still == null) return const ColoredBox(color: Colors.black);
+      picture = Image.memory(still, fit: BoxFit.fill, gaplessPlayback: true);
+    } else if (source.isImage) {
       picture = Image.file(File(source.path), fit: BoxFit.fill, gaplessPlayback: true);
     } else {
       final controller = player.controllerFor(clip.id);

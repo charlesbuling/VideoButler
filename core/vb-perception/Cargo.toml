@@ -8,6 +8,7 @@ license.workspace = true
 authors.workspace = true
 
 [dependencies]
+dunce.workspace = true
 vb-contracts.workspace = true
 vb-media.workspace = true
 vb-infer.workspace = true

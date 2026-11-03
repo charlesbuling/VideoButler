@@ -628,6 +628,16 @@ String? parentDirectoryOf(String? path) {
   return cut <= 0 ? null : path.substring(0, cut);
 }
 
+/// The last part of a path, after either separator: a Windows path from
+/// the engine carries backslashes, and one built from a folder the user
+/// typed may mix both.
+String fileNameOf(String path) {
+  final slash = path.lastIndexOf('/');
+  final backslash = path.lastIndexOf(r'\');
+  final cut = slash > backslash ? slash : backslash;
+  return path.substring(cut + 1);
+}
+
 String formatBytes(int bytes) {
   if (bytes < 1024) return '$bytes B';
   const units = ['KB', 'MB', 'GB', 'TB'];

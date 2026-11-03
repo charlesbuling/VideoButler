@@ -228,7 +228,7 @@ pub fn browse_for(dir: Option<&str>, kind: BrowseKind) -> Value {
         _ => home_dir(),
     };
 
-    let path = std::fs::canonicalize(&path).unwrap_or(path);
+    let path = dunce::canonicalize(&path).unwrap_or(path);
     if !path.is_dir() {
         return json!({
             "path": path.to_string_lossy(),

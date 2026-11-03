@@ -108,6 +108,25 @@ if(VB_LIBAV_DLLS)
   install(FILES ${VB_LIBAV_DLLS} DESTINATION "${INSTALL_BUNDLE_LIB_DIR}" COMPONENT Runtime)
 endif()
 
+
+# The model host's two engines, which the engine loads at runtime from beside
+# the executable, by full path: ONNX Runtime (scripts/fetch-onnxruntime-
+# windows.sh; System32's onnxruntime.dll is Windows ML's, older) and
+# llama.cpp in vb_llama_engine.dll. Without them the models that need them
+# are reported as not installed, never mocked. VB_ORT_LIB overrides where
+# ONNX Runtime comes from.
+if(NOT DEFINED VB_ORT_LIB)
+  set(VB_ORT_LIB "${VB_REPO}/build/onnxruntime-windows/current/lib")
+endif()
+file(GLOB VB_ORT_DLLS "${VB_ORT_LIB}/*.dll")
+if(VB_ORT_DLLS)
+  install(FILES ${VB_ORT_DLLS} DESTINATION "${INSTALL_BUNDLE_LIB_DIR}" COMPONENT Runtime)
+endif()
+if(EXISTS "${VB_ENGINE_DIR}/vb_llama_engine.dll")
+  install(FILES "${VB_ENGINE_DIR}/vb_llama_engine.dll" DESTINATION "${INSTALL_BUNDLE_LIB_DIR}"
+    COMPONENT Runtime)
+endif()
+
 if(PLUGIN_BUNDLED_LIBRARIES)
   install(FILES "${PLUGIN_BUNDLED_LIBRARIES}"
     DESTINATION "${INSTALL_BUNDLE_LIB_DIR}"

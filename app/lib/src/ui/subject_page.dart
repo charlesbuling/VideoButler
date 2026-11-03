@@ -19,6 +19,7 @@ import '../api_models.dart';
 import '../engine/engine.dart';
 import '../engine/engine_api.dart';
 import '../l10n/strings.dart';
+import '../models.dart';
 import '../theme.dart';
 import 'project_page.dart';
 import 'thumbnail.dart';
@@ -394,7 +395,7 @@ class _SubjectPageState extends State<SubjectPage> {
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
-                      a.sourcePath.isEmpty ? s.clipNotRecorded : a.sourcePath.split('/').last,
+                      a.sourcePath.isEmpty ? s.clipNotRecorded : fileNameOf(a.sourcePath),
                       style: a.sourcePath.isEmpty
                           ? theme.textTheme.bodySmall
                               ?.copyWith(color: theme.colorScheme.onSurfaceVariant)

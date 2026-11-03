@@ -17,11 +17,12 @@
 # executable (app/windows/CMakeLists.txt).
 #
 # On Windows, from Git Bash, with Rust (MSVC), Flutter and Visual Studio's
-# C++ tools: builds everything, whisper.cpp included, into
-# app/build/windows/x64/runner/Release -- run video_butler.exe there.
-# ffmpeg itself is cross-built with Zig on Linux or a Mac (Windows has no
-# shell its configure runs well in), and the Windows repository carries
-# the result in build/ffmpeg-windows-x86_64/current.
+# C++ tools: builds everything -- whisper.cpp linked in, llama.cpp's engine
+# library, ONNX Runtime fetched -- into app/build/windows/x64/runner/Release;
+# run video_butler.exe there. ffmpeg is the LGPL build under
+# build/ffmpeg-windows-x86_64/current (WINDOWS.md), which
+# scripts/build-ffmpeg-cross.sh makes again from an MSYS2 shell, or from
+# Linux or a Mac.
 #
 # From a Mac it cross-builds ffmpeg and the engine, with Zig, to check they
 # link; whisper.cpp is left out there. Flutter builds a Windows app only on
@@ -39,7 +40,7 @@ case "$(uname -s)" in
   MINGW* | MSYS* | CYGWIN*)
     if [ ! -f "$LIBAV/lib/avformat.lib" ]; then
       echo "No LGPL ffmpeg at $LIBAV. Build it with scripts/build-ffmpeg-cross.sh" \
-        "windows-x86_64 on Linux or a Mac and copy build/ffmpeg-windows-x86_64 here." >&2
+        "windows-x86_64 from an MSYS2 shell (WINDOWS.md)." >&2
       exit 1
     fi
     VB_LIBAV_DIR_x86_64_pc_windows_msvc="$(cd "$LIBAV" && pwd -W 2>/dev/null || pwd)"
@@ -47,7 +48,21 @@ case "$(uname -s)" in
     echo "Building the engine for x86_64-pc-windows-msvc"
     cargo build --release -p vb-ffi --features libav,whisper --target x86_64-pc-windows-msvc \
       --manifest-path core/Cargo.toml
-    (cd app && flutter pub get > /dev/null && flutter build windows --release)
+    # The model host: llama.cpp in a library of its own, and ONNX Runtime,
+    # both loaded at runtime from beside the executable.
+    cargo build --release -p vb-llama-engine --target x86_64-pc-windows-msvc \
+      --manifest-path core/Cargo.toml
+    ./scripts/fetch-onnxruntime-windows.sh
+    # A pub mirror (PUB_HOSTED_URL, as from mainland China) is written into
+    # pubspec.lock in place of pub.dev, and a lock naming another host is
+    # resolved afresh, newer versions and all. So the lock names the mirror
+    # while pub runs, and pub.dev again after, whatever happens in between.
+    if [ -n "${PUB_HOSTED_URL:-}" ] && [ "${PUB_HOSTED_URL%/}" != "https://pub.dev" ]; then
+      mirror="${PUB_HOSTED_URL%/}"
+      sed -i "s#url: \"https://pub.dev\"#url: \"$mirror\"#" app/pubspec.lock
+      trap 'sed -i "s#url: \"$mirror\"#url: \"https://pub.dev\"#" app/pubspec.lock' EXIT
+    fi
+    (cd app && flutter pub get > /dev/null && flutter build windows --release --no-pub)
     OUT="app/build/windows/x64/runner/Release"
     echo
     echo "App: $OUT/video_butler.exe  ($(du -sh "$OUT" | cut -f1), with LGPL ffmpeg inside)"
@@ -62,6 +77,6 @@ case "$(uname -s)" in
       --manifest-path core/Cargo.toml
     echo
     echo "Engine: core/target/x86_64-pc-windows-gnu/release/vb_ffi.dll"
-    echo "The app itself builds only on Windows: run this script there."
+    echo "The app itself builds only on Windows: run this script there, or let CI."
     ;;
 esac

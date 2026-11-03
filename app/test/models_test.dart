@@ -116,11 +116,11 @@ void main() {
     test('a directory listing keeps folders and videos apart', () {
       final listing = DirectoryListing.fromJson(jsonDecode('''
       {
-        "path": "/Users/me/Movies",
-        "parent": "/Users/me",
+        "path": "/Users/zhou/Movies",
+        "parent": "/Users/zhou",
         "entries": [
-          {"name":"Trips","path":"/Users/me/Movies/Trips","kind":"dir"},
-          {"name":"hike.mp4","path":"/Users/me/Movies/hike.mp4",
+          {"name":"Trips","path":"/Users/zhou/Movies/Trips","kind":"dir"},
+          {"name":"hike.mp4","path":"/Users/zhou/Movies/hike.mp4",
            "kind":"video","sizeBytes":2550981}
         ]
       }
@@ -135,12 +135,12 @@ void main() {
 
   group('path handling', () {
     test('a posix path yields its directory', () {
-      expect(parentDirectoryOf('/Users/me/Movies/hike.mp4'),
-          '/Users/me/Movies');
+      expect(parentDirectoryOf('/Users/zhou/Movies/hike.mp4'),
+          '/Users/zhou/Movies');
     });
 
     test('a windows path yields its directory', () {
-      expect(parentDirectoryOf(r'C:\Users\me\hike.mp4'), r'C:\Users\me');
+      expect(parentDirectoryOf(r'C:\Users\zhou\hike.mp4'), r'C:\Users\zhou');
     });
 
     test('a bare filename has no directory rather than throwing', () {
@@ -155,6 +155,15 @@ void main() {
     test('nothing in, nothing out', () {
       expect(parentDirectoryOf(null), isNull);
       expect(parentDirectoryOf(''), isNull);
+    });
+
+    test('a file name is found after either separator', () {
+      expect(fileNameOf('/Users/zhou/Movies/hike.mp4'), 'hike.mp4');
+      expect(fileNameOf(r'K:\旅行\hike.mp4'), 'hike.mp4');
+      // A folder typed with slashes, then joined on Windows.
+      expect(fileNameOf(r'K:/旅行\hike.mp4'), 'hike.mp4');
+      expect(fileNameOf(r'K:\旅行/hike.mp4'), 'hike.mp4');
+      expect(fileNameOf('hike.mp4'), 'hike.mp4');
     });
   });
 
