@@ -1,0 +1,46 @@
+[package]
+name = "vb-pipeline"
+description = "Stage orchestration and the content-addressed cache. Incremental processing with on-disk reuse is the load-bearing performance lever, not raw model speed."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+
+[dependencies]
+vb-contracts.workspace = true
+vb-media.workspace = true
+vb-geo.workspace = true
+vb-infer.workspace = true
+vb-perception.workspace = true
+vb-narrative.workspace = true
+vb-render.workspace = true
+vb-edit.workspace = true
+vb-export.workspace = true
+vb-cloud.workspace = true
+vb-apple.workspace = true
+vb-onnx.workspace = true
+vb-llama.workspace = true
+vb-whisper = { workspace = true, optional = true }
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+time.workspace = true
+# Captions written in Chinese are made simplified, from OpenCC's tables, as
+# speech is in vb-whisper. MIT, dictionaries Apache-2.0.
+fast2s = "0.3"
+# Model files imported from a folder are checked against the catalogue's
+# SHA-256, as downloads are in vb-cloud.
+sha2 = "0.10"
+# Thumbnails for the footage picker, as PNG in base64 so every transport --
+# the C ABI, HTTP, the CLI -- carries them alike. Both MIT OR Apache-2.0.
+png = "0.18"
+base64 = "0.22"
+
+[features]
+# Analyse video with linked libav instead of the ffmpeg CLI. See vb-media.
+libav = ["vb-media/libav"]
+# Transcribe speech with whisper.cpp, using a model from the library. Off by
+# default because it compiles a C++ runtime; the app builds turn it on.
+whisper = ["dep:vb-whisper"]

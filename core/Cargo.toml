@@ -1,0 +1,58 @@
+[workspace]
+resolver = "3"
+members = ["vb-contracts", "vb-media", "vb-geo", "vb-infer", "vb-narrative", "vb-perception", "vb-export", "vb-render", "vb-text", "vb-edit", "vb-cloud", "vb-apple", "vb-whisper", "vb-onnx", "vb-llama", "vb-llama-engine", "vb-pipeline", "vb-cli", "vb-ffi"]
+
+# Dependency direction is documented in docs/architecture.md and enforced two ways:
+# the per-crate dependency lists below, and a test in vb-narrative that asserts
+# its own dependency closure stays shut. vb-narrative must never gain a path to
+# vb-media, vb-perception, vb-render or vb-export.
+[workspace.package]
+version = "0.2.0"
+edition = "2024"
+rust-version = "1.85"
+license = "AGPL-3.0-or-later"
+authors = ["zhengkuang <217010072@link.cuhk.edu.cn>"]
+repository = "https://github.com/charlesbuling/VideoButler"
+
+[workspace.dependencies]
+# Versioned as well as pathed: a bare path dependency is a wildcard version,
+# which cargo-deny rejects.
+vb-contracts = { path = "vb-contracts", version = "0.2.0" }
+vb-media = { path = "vb-media", version = "0.2.0" }
+vb-geo = { path = "vb-geo", version = "0.2.0" }
+vb-infer = { path = "vb-infer", version = "0.2.0" }
+vb-perception = { path = "vb-perception", version = "0.2.0" }
+vb-narrative = { path = "vb-narrative", version = "0.2.0" }
+vb-render = { path = "vb-render", version = "0.2.0" }
+vb-text = { path = "vb-text", version = "0.2.0" }
+vb-edit = { path = "vb-edit", version = "0.2.0" }
+vb-export = { path = "vb-export", version = "0.2.0" }
+vb-cloud = { path = "vb-cloud", version = "0.2.0" }
+vb-apple = { path = "vb-apple", version = "0.2.0" }
+vb-whisper = { path = "vb-whisper", version = "0.2.0" }
+vb-onnx = { path = "vb-onnx", version = "0.2.0" }
+vb-llama = { path = "vb-llama", version = "0.2.0" }
+vb-pipeline = { path = "vb-pipeline", version = "0.2.0" }
+
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "2"
+anyhow = "1"
+blake3 = { version = "1", features = ["mmap", "rayon"] }
+time = { version = "0.3", features = ["formatting", "parsing", "macros"] }
+# Default features off on purpose. `resolve-http` pulls in an HTTP client with
+# TLS so the validator can fetch remote $refs, which an offline-first engine
+# must never do, and it roughly doubles the Android library. The schemas are
+# embedded at compile time and reference nothing external.
+jsonschema = { version = "0.26", default-features = false }
+clap = { version = "4", features = ["derive"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+quick-xml = "0.37"
+# Reads a photograph's EXIF -- which way up, and when -- in vb-media.
+# Pure Rust, BSD-2-Clause, and it reads JPEG, HEIF, PNG and WebP alike.
+kamadak-exif = "0.6"
+tiny_http = "0.12"
+# Build-time only, for the optional linked-libav backend in vb-media.
+cc = "1"
+pkg-config = "0.3"

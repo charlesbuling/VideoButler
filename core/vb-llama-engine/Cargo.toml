@@ -1,0 +1,30 @@
+[package]
+name = "vb-llama-engine"
+description = "llama.cpp, whole, in a dynamic library of its own: vision-language models in GGUF behind a four-function C ABI that vb-llama loads at runtime."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+
+# A dynamic library, and never a dependency of the engine. whisper.cpp and
+# llama.cpp each carry their own ggml, ten minor versions apart; linked into
+# one binary, one set of ggml symbols silently wins and the other library
+# calls into code it was not built against. Here llama.cpp's ggml stays
+# inside this library, unexported, and the engine reaches it through
+# vb-llama's loader.
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+
+# Default features off: openmp is not in Apple's toolchain, and the Android
+# C++ runtime choice belongs to the app's build, not this crate. Pinned
+# exactly, because the bindings follow llama.cpp's C API, which moves.
+[target.'cfg(target_vendor = "apple")'.dependencies]
+llama-cpp-2 = { version = "=0.1.156", default-features = false, features = ["mtmd", "metal"] }
+llama-cpp-sys-2 = { version = "=0.1.156", default-features = false, features = ["mtmd", "metal"] }
+
+[target.'cfg(not(target_vendor = "apple"))'.dependencies]
+llama-cpp-2 = { version = "=0.1.156", default-features = false, features = ["mtmd"] }
+llama-cpp-sys-2 = { version = "=0.1.156", default-features = false, features = ["mtmd"] }

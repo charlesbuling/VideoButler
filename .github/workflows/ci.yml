@@ -1,0 +1,339 @@
+name: CI
+
+# Not run: there is no CI (decided 2026-10-17), and GitHub Actions is off on
+# both repositories. Kept as the written-down build and check of each
+# platform, which only a person can start, and only once Actions is on.
+on:
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+jobs:
+  core:
+    # macOS is the reference target from the project's own development
+    # environment, and it is where ffmpeg is easiest to provision.
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: core
+
+      - name: Install ffmpeg
+        # The formula carries the headers and .pc files the linked-libav
+        # backend builds against, so one install serves both backends.
+        run: brew install ffmpeg pkgconf
+
+      - name: Generate test media
+        run: ./scripts/make-test-media.sh
+
+      - name: Formatting
+        run: cargo fmt --all --check --manifest-path core/Cargo.toml
+
+      - name: Clippy
+        run: cargo clippy --workspace --all-targets --manifest-path core/Cargo.toml -- -D warnings
+
+      - name: Tests
+        # Includes the end-to-end suite, which runs the whole chain against
+        # real media with no network and no model weights.
+        run: cargo test --workspace --manifest-path core/Cargo.toml
+
+      - name: Linked-libav backend, and the app's feature set
+        # Off by default, so the steps above never compile it. Mobile depends
+        # on it, and the parity suite holds it to the CLI backend's output on
+        # real media. Clippy also covers whisper, because the desktop app
+        # ships with it; it compiles whisper.cpp through CMake.
+        run: |
+          cargo clippy -p vb-media -p vb-pipeline -p vb-cli -p vb-ffi --all-targets \
+            --features vb-pipeline/libav,vb-pipeline/whisper \
+            --manifest-path core/Cargo.toml -- -D warnings
+          cargo test -p vb-media -p vb-pipeline -p vb-cli -p vb-ffi \
+            --features vb-pipeline/libav --manifest-path core/Cargo.toml
+
+      - name: Contract fixtures validate
+        run: |
+          cargo run -q -p vb-cli --manifest-path core/Cargo.toml -- \
+            validate contracts/examples/footage-graph.example.json
+          cargo run -q -p vb-cli --manifest-path core/Cargo.toml -- \
+            validate contracts/examples/editing-dsl.example.json
+
+      - name: Offline run produces a draft
+        # The offline guarantee is a product requirement, so it is asserted
+        # rather than assumed.
+        run: |
+          cargo run -q -p vb-cli --manifest-path core/Cargo.toml -- \
+            run test-media/sample.mp4 --out "$RUNNER_TEMP/draft.otio" \
+            --project-dir "$RUNNER_TEMP/vb" --offline
+
+      - name: Draft parses in OpenTimelineIO
+        run: |
+          python3 -m pip install --quiet --user opentimelineio
+          python3 - "$RUNNER_TEMP/draft.otio" <<'PY'
+          import sys, opentimelineio as otio
+          tl = otio.adapters.read_from_file(sys.argv[1])
+          clips = list(tl.find_clips())
+          assert clips, "the draft contains no clips"
+          for c in clips:
+              url = c.media_reference.target_url
+              assert url.startswith("file:///"), f"media URL is not absolute: {url}"
+          print(f"OK: {tl.name}, {len(clips)} clips, {tl.duration().to_seconds()}s")
+          PY
+
+  app:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - name: Dart dependencies
+        working-directory: app
+        run: flutter pub get
+
+      - name: Dart analysis
+        working-directory: app
+        run: flutter analyze
+
+      - name: Dart tests
+        working-directory: app
+        run: flutter test
+
+      # integration_test/ drives the real macOS app with the engine linked in.
+      # It needs the LGPL ffmpeg build and an Xcode build of the app, which is
+      # more than a CI minute budget should buy on every push, so it runs by
+      # hand -- see the README.
+
+      - name: Web build
+        # The web target has no Xcode dependency and serves the same UI from
+        # `vb serve`, so it has to keep compiling.
+        working-directory: app
+        run: flutter build web --release
+
+  android:
+    # Cross-compiling the engine is the part that breaks silently when a
+    # dependency stops supporting Android. Assembling the APK on top of it
+    # adds little and costs a lot of CI minutes, so this stops at the .so
+    # files: the engine and the LGPL libav it links.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android,armv7-linux-androideabi,x86_64-linux-android
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: core
+
+      - uses: nttld/setup-ndk@v1
+        id: ndk
+        with:
+          ndk-version: r27
+          local-cache: true
+
+      - name: Install cargo-ndk
+        run: cargo install cargo-ndk --locked
+
+      - uses: actions/cache@v4
+        with:
+          path: |
+            build/ffmpeg-android
+            build/ffmpeg-src
+          # The script pins the ffmpeg version and configuration, so its hash
+          # is the build's identity; the NDK is the other input.
+          key: ffmpeg-android-${{ hashFiles('scripts/build-ffmpeg-android.sh') }}-ndk-r27
+
+      - name: LGPL ffmpeg for Android
+        # What the shipping engine links. The script checks the result is
+        # LGPL and has unversioned sonames, and fails otherwise.
+        env:
+          ANDROID_NDK_HOME: ${{ steps.ndk.outputs.ndk-path }}
+        run: |
+          ./scripts/build-ffmpeg-android.sh
+          ./scripts/build-ffmpeg-android.sh --env | sed 's/^export //' >> "$GITHUB_ENV"
+
+      - name: Cross-compile the engine
+        # With the linked-libav backend, as scripts/build-android.sh builds
+        # it: without it the app cannot analyse video on Android at all.
+        working-directory: core
+        env:
+          ANDROID_NDK_HOME: ${{ steps.ndk.outputs.ndk-path }}
+        run: |
+          cargo ndk -t arm64-v8a -t armeabi-v7a -t x86_64 --platform 24 \
+            -o "$RUNNER_TEMP/jniLibs" build --release -p vb-ffi --features libav
+
+      - name: Check every ABI links libav it can find
+        run: |
+          for abi in arm64-v8a armeabi-v7a x86_64; do
+            lib="$RUNNER_TEMP/jniLibs/$abi/libvb_ffi.so"
+            test -f "$lib" || { echo "missing library for $abi"; exit 1; }
+            needed="$(readelf -d "$lib" | grep -oE 'lib(av|sw)[a-z]+\.so' || true)"
+            test -n "$needed" || { echo "$abi was built without libav"; exit 1; }
+            for so in $needed; do
+              test -f "$VB_FFMPEG_ANDROID_ROOT/$abi/lib/$so" \
+                || { echo "$abi needs $so, which the ffmpeg build lacks"; exit 1; }
+            done
+            echo "$abi ok: $(echo $needed)"
+          done
+
+  ffmpeg-desktop:
+    # The LGPL ffmpeg the Linux and Windows apps carry, cross-built with Zig
+    # by the same script a developer runs on a Mac, so the two cannot differ.
+    # Windows gets its DLLs from here: its configure wants a POSIX shell.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: mlugg/setup-zig@v2
+        with:
+          version: 0.16.0
+      - uses: actions/cache@v4
+        with:
+          path: |
+            build/ffmpeg-linux-x86_64
+            build/ffmpeg-windows-x86_64
+            build/ffmpeg-src
+          key: ffmpeg-desktop-${{ hashFiles('scripts/build-ffmpeg-cross.sh') }}-zig-0.16.0
+      - name: LGPL ffmpeg for Linux and Windows
+        run: |
+          ./scripts/build-ffmpeg-cross.sh linux-x86_64
+          ./scripts/build-ffmpeg-cross.sh windows-x86_64
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ffmpeg-linux-x86_64
+          path: build/ffmpeg-linux-x86_64/9.0.1
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ffmpeg-windows-x86_64
+          path: build/ffmpeg-windows-x86_64/9.0.1
+
+  linux:
+    needs: ffmpeg-desktop
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: ffmpeg-linux-x86_64
+          path: build/ffmpeg-linux-x86_64/current
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: core
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+      - name: System packages
+        # Flutter's Linux toolchain, and a CLI ffmpeg for the tests that
+        # compare the two backends and generate the fixtures (test only; the
+        # app carries the LGPL build above).
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev ffmpeg
+      - name: Engine tests on Linux
+        run: |
+          ./scripts/make-test-media.sh
+          cargo test --workspace --manifest-path core/Cargo.toml
+      - name: Engine with LGPL libav and whisper.cpp
+        env:
+          VB_LIBAV_DIR_x86_64_unknown_linux_gnu: ${{ github.workspace }}/build/ffmpeg-linux-x86_64/current
+          CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUSTFLAGS: -C link-arg=-Wl,-rpath,$ORIGIN
+        run: |
+          cargo build --release -p vb-ffi --features libav,whisper \
+            --target x86_64-unknown-linux-gnu --manifest-path core/Cargo.toml
+          readelf -d core/target/x86_64-unknown-linux-gnu/release/libvb_ffi.so | grep -E 'NEEDED|RUNPATH'
+      - name: Linux app
+        working-directory: app
+        run: |
+          flutter pub get
+          flutter build linux --release
+          ls build/linux/x64/release/bundle/lib
+          test -f build/linux/x64/release/bundle/lib/libvb_ffi.so
+          test -f build/linux/x64/release/bundle/lib/libavcodec.so.63
+      - uses: actions/upload-artifact@v4
+        with:
+          name: video-butler-linux-x64
+          path: app/build/linux/x64/release/bundle
+
+  windows:
+    needs: ffmpeg-desktop
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: ffmpeg-windows-x86_64
+          path: build/ffmpeg-windows-x86_64/current
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: core
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+      - name: Engine and app
+        # scripts/build-windows.sh: the engine with MSVC against ffmpeg's
+        # import libraries, whisper.cpp through CMake, then Flutter, which
+        # copies vb_ffi.dll and ffmpeg's DLLs beside the executable.
+        run: ./scripts/build-windows.sh
+      - name: The bundle carries the engine and ffmpeg
+        run: |
+          ls app/build/windows/x64/runner/Release
+          test -f app/build/windows/x64/runner/Release/vb_ffi.dll
+          test -f app/build/windows/x64/runner/Release/avcodec-63.dll
+      - name: Contract and narrative tests on Windows
+        run: cargo test -p vb-contracts -p vb-narrative --manifest-path core/Cargo.toml
+      - uses: actions/upload-artifact@v4
+        with:
+          name: video-butler-windows-x64
+          path: app/build/windows/x64/runner/Release
+
+  ios:
+    # The iOS app for the simulator: LGPL ffmpeg as frameworks, the engine
+    # for the simulator, and Flutter's build. No signing, so no account.
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-ios-sim,aarch64-apple-ios
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: core
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+      - uses: actions/cache@v4
+        with:
+          path: |
+            build/ffmpeg-ios
+            build/ffmpeg-src
+          key: ffmpeg-ios-${{ hashFiles('scripts/build-ffmpeg-ios.sh') }}
+      - name: Simulator app
+        run: ./scripts/build-ios.sh --simulator
+
+  licenses:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: No non-commercial dependencies
+        # CoTracker3 and MMAudio are CC-BY-NC and would block a paid release.
+        run: ./scripts/check-licenses.sh
+
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: taiki-e/install-action@cargo-deny
+      - name: cargo-deny
+        run: cargo deny --manifest-path core/Cargo.toml check licenses bans sources

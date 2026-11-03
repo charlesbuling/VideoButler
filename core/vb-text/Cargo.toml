@@ -1,0 +1,16 @@
+[package]
+name = "vb-text"
+description = "Text drawn into a finished piece: subtitles, captions and titles, shaped and rasterised in Rust with the system's own fonts, so the renderer needs no ffmpeg text filter."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+
+[dependencies]
+# Shaping, line breaking, font fallback and rasterisation, all in Rust:
+# fontdb finds the system's fonts, harfrust shapes, swash rasterises.
+# MIT OR Apache-2.0 throughout. Default features off: fontconfig parsing is
+# a Linux nicety the fallback lists cover.
+cosmic-text = { version = "0.19", default-features = false, features = ["std", "swash"] }
+tracing.workspace = true

@@ -1,0 +1,49 @@
+# Copyright (C) 2026 zhengkuang <217010072@link.cuhk.edu.cn>
+# SPDX-License-Identifier: AGPL-3.0-or-later
+name: video_butler
+description: On-device AI video auto-editing. One Dart UI over the Rust engine.
+publish_to: none
+version: 0.2.0+6
+repository: https://github.com/charlesbuling/VideoButler
+issue_tracker: https://github.com/charlesbuling/VideoButler/issues
+
+environment:
+  sdk: ">=3.4.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  # Chinese for Flutter's own widgets: menus, tooltips, the text-field
+  # context menu. Part of the SDK; the app's own strings are in
+  # lib/src/l10n/strings.dart.
+  flutter_localizations:
+    sdk: flutter
+  # Used only by the web engine, which talks to `vb serve` over loopback.
+  # The native engine calls the same operations through dart:ffi and needs
+  # no package at all.
+  http: ^1.2.0
+  # Utf8 pointer helpers for the native engine. dart:ffi itself is built in.
+  ffi: ^2.1.0
+  # Plays a clip in the footage picker before it is chosen. The Flutter
+  # team's own plugin, BSD-3-Clause: ExoPlayer on Android, AVFoundation on
+  # the Mac, built through Swift Package Manager there (below), so no
+  # CocoaPods.
+  video_player: ^2.14.0
+  # iOS only: an iPhone's videos and photos are in its photo library, which
+  # the engine's own picker cannot see from inside the app's sandbox. The
+  # Flutter team's plugin, BSD-3; picks are copied into the app's Documents.
+  image_picker: ^1.2.3
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  # Drives the real app, with the real engine linked in, from code: the one
+  # way to check the whole path end to end without a person at the screen.
+  integration_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+
+flutter:
+  uses-material-design: true
+  config:
+    enable-swift-package-manager: true

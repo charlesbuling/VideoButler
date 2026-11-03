@@ -1,0 +1,168 @@
+Copyright (C) 2026 zhengkuang <217010072@link.cuhk.edu.cn>
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU Affero General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU Affero General Public License for more details.
+
+You should have received a copy of the GNU Affero General Public License
+along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+------------------------------------------------------------------------
+
+SPDX-License-Identifier: AGPL-3.0-or-later
+
+Video Butler
+Copyright (C) 2026 zhengkuang <217010072@link.cuhk.edu.cn>
+
+The complete license terms are in `LICENSE` (GNU Affero General Public
+License, version 3, 19 November 2007, unmodified). The project's SPDX
+identifier is `AGPL-3.0-or-later`: version 3 or, at your option, any later
+version. Commercial licensing that does not require publishing source is
+not granted by the AGPL; write to 217010072@link.cuhk.edu.cn. Contributions
+are accepted under `CLA.md`.
+
+This file also records third-party software and model weights the program
+builds, links, or downloads. It is not a substitute for those projects'
+own notices.
+
+The complete third-party inventory -- every native library, model weight,
+Rust crate and Dart package, with its license, upstream, and the copyright
+notices its license requires -- is in `THIRD_PARTY_NOTICES.md`.
+
+## ffmpeg
+
+Role: decoding, stills, and (where a platform encoder is used) muxing.
+The release build is an LGPL build produced by `scripts/build-ffmpeg-*.sh`.
+Those scripts refuse to finish if the result is not LGPL. The development
+machine's Homebrew ffmpeg may be GPL; that binary is not what the app ships.
+
+How it is combined with Video Butler:
+
+- macOS: dynamic libraries inside `video_butler.app/Contents/Frameworks`,
+  loaded by the in-process LibAv backend.
+- iOS: dynamic frameworks embedded in the app, so the LGPL libraries can be
+  replaced.
+- Android: `libav*.so` and `libswscale.so` in the APK, loaded by soname next
+  to the engine.
+- Linux and the Windows engine build: dynamic libraries beside the engine
+  (`RUNPATH $ORIGIN` on Linux). The Windows application itself is developed
+  in `charlesbuling/VideoBulter-windows` and is not part of this 0.2.0 release.
+- The desktop CLI can instead spawn an `ffmpeg` binary (`FfmpegCli`). That
+  path is not the mobile app.
+
+The editor's export uses the platform encoder (VideoToolbox on Apple) and
+libav's AAC. It does not ship x264, x265, `drawtext`, or `eq`.
+
+Upstream: https://ffmpeg.org/ — LGPL version 2.1 or later for the build
+this project produces. ffmpeg's own source notices travel with that build.
+
+## whisper.cpp
+
+Role: speech recognition behind `AsrAdapter`, when the `whisper` feature is
+on (macOS, Android, iOS, and a native Linux build).
+
+Upstream: https://github.com/ggml-org/whisper.cpp — MIT.
+The ggml weights are conversions of OpenAI Whisper, also MIT. See the model
+list below. whisper.cpp is linked into the engine. It is not the same
+binary as llama.cpp: each carries its own ggml, so they are not linked
+together.
+
+## llama.cpp
+
+Role: vision-language models (captions, and the composition judge when its
+files are present). Built into `vb-llama-engine`, a separate dynamic
+library with a small C ABI and no exported ggml symbols. `vb-llama` loads
+that library at runtime.
+
+Upstream: https://github.com/ggml-org/llama.cpp — MIT.
+Not part of the iOS build, and not yet part of the Linux or Windows engine
+builds.
+
+## ONNX Runtime
+
+Role: depth, face detection, person masks, body pose, scene labels, and
+AuraFace face grouping. Loaded at runtime (`ort` with `load-dynamic`).
+Nothing in the engine links it.
+
+Upstream: https://github.com/microsoft/onnxruntime — MIT.
+The macOS copy is built from source for this app's deployment target. The
+Android copy is Microsoft's Android build, fetched by
+`scripts/fetch-onnxruntime-android.sh`. Not part of the iOS build, and not
+yet part of the Linux or Windows engine builds.
+
+## Model weights
+
+Downloaded files are named and hashed in `core/vb-pipeline/src/models.rs`.
+Sizes below are the catalogue's byte counts. A non-commercial weight is not
+in the catalogue. Depth Anything V2 Base and Large are CC-BY-NC and are not
+shipped; only the Small export is. AuraFace is `glintr100.onnx` only; the
+other files in that repository are not fetched.
+
+| File | Bytes | License | Upstream |
+|---|---:|---|---|
+| `ggml-tiny.bin` | 77691713 | MIT | https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-tiny.bin |
+| `ggml-base-q5_1.bin` | 59707625 | MIT | https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base-q5_1.bin |
+| `ggml-base.bin` | 147951465 | MIT | https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base.bin |
+| `ggml-small-q5_1.bin` | 190085487 | MIT | https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small-q5_1.bin |
+| `ggml-small.bin` | 487601967 | MIT | https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small.bin |
+| `depth-anything-v2-small.onnx` | 99060839 | Apache-2.0 | https://huggingface.co/onnx-community/depth-anything-v2-small/resolve/main/onnx/model.onnx |
+| `face_detection_yunet_2023mar.onnx` | 232589 | MIT | https://huggingface.co/opencv/face_detection_yunet/resolve/main/face_detection_yunet_2023mar.onnx |
+| `auraface-v1-glintr100.onnx` | 260694151 | Apache-2.0 | https://huggingface.co/fal/AuraFace-v1/resolve/af6d057c9b0ec4071d4c49c80e3539258798b609/glintr100.onnx |
+| `human_segmentation_pphumanseg_2023mar.onnx` | 6163938 | Apache-2.0 | https://huggingface.co/opencv/human_segmentation_pphumanseg/resolve/main/human_segmentation_pphumanseg_2023mar.onnx |
+| `qwen3-vl-8b-instruct-q4_k_m.gguf` | 5027784800 | Apache-2.0 | https://huggingface.co/Qwen/Qwen3-VL-8B-Instruct-GGUF/resolve/main/Qwen3VL-8B-Instruct-Q4_K_M.gguf |
+| `qwen3-vl-8b-instruct-mmproj-f16.gguf` | 1159029824 | Apache-2.0 | https://huggingface.co/Qwen/Qwen3-VL-8B-Instruct-GGUF/resolve/main/mmproj-Qwen3VL-8B-Instruct-F16.gguf |
+| `qwen3-vl-4b-instruct-q4_k_m.gguf` | 2497281664 | Apache-2.0 | https://huggingface.co/Qwen/Qwen3-VL-4B-Instruct-GGUF/resolve/main/Qwen3VL-4B-Instruct-Q4_K_M.gguf |
+| `qwen3-vl-4b-instruct-mmproj-f16.gguf` | 836180256 | Apache-2.0 | https://huggingface.co/Qwen/Qwen3-VL-4B-Instruct-GGUF/resolve/main/mmproj-Qwen3VL-4B-Instruct-F16.gguf |
+| `qwen3-vl-2b-instruct-q4_k_m.gguf` | 1107409952 | Apache-2.0 | https://huggingface.co/Qwen/Qwen3-VL-2B-Instruct-GGUF/resolve/main/Qwen3VL-2B-Instruct-Q4_K_M.gguf |
+| `qwen3-vl-2b-instruct-mmproj-f16.gguf` | 819394848 | Apache-2.0 | https://huggingface.co/Qwen/Qwen3-VL-2B-Instruct-GGUF/resolve/main/mmproj-Qwen3VL-2B-Instruct-F16.gguf |
+| `rtmo-s.onnx` | 39636400 | Apache-2.0 | https://huggingface.co/Xenova/RTMO-s/resolve/main/onnx/model.onnx |
+| `siglip2-base-patch16-224-vision-fp16.onnx` | 186039516 | Apache-2.0 | https://huggingface.co/onnx-community/siglip2-base-patch16-224-ONNX/resolve/ba1f3b0843f24bc5417d38e19c37b287d719b2f4/onnx/vision_model_fp16.onnx |
+
+PhotoFramer (`photoframer-7b-q4_k_m.gguf` and `photoframer-7b-mmproj-f16.gguf`)
+is MIT, published as PyTorch weights and converted on a development machine
+by `scripts/convert-photoframer.sh`. It is not in the download catalogue and
+has no catalogue digest. Upstream weights:
+https://huggingface.co/zhiyuanyou/Qwen2.5-VL-7B-GRPO-Composition-Score-Class
+The converted weight is about 4.4 GB. Public hosting for the converted
+GGUF files is not decided yet; scripts/fetch-models.sh skips them unless
+VB_PHOTOFRAMER_URL and VB_PHOTOFRAMER_MMPROJ_URL are set.
+
+Every other model downloads from the upstream URL in the table above
+(models-manifest.json, scripts/fetch-models.sh). An optional GitHub Release
+mirror splits any file over 1.9 GiB (`split -b 1900M -d -a 2`); the script
+joins the parts and checks the whole file.
+
+Whisper weights: OpenAI Whisper, MIT, via the whisper.cpp ggml files.
+Qwen3-VL weights: Apache-2.0, Qwen.
+Depth Anything V2 Small: Apache-2.0. YuNet and PP-HumanSeg: the ONNX files
+published in the OpenCV model zoos linked above (MIT and Apache-2.0 as
+catalogued). AuraFace v1: Apache-2.0, fal. RTMO-s: Apache-2.0, OpenMMLab,
+ONNX export by Xenova. SigLIP 2: Apache-2.0, Google, fp16 ONNX export by
+onnx-community. The scene-label table embedded in `vb-onnx` was produced
+from that text tower on the development side; the text tower itself is not
+shipped.
+
+## Other data and tools
+
+- Map outlines in `vb-geo` are Natural Earth, public domain
+  (https://www.naturalearthdata.com/). A map shown in an app published in
+  mainland China needs a review number (审图号). These outlines do not have
+  one.
+- The Flutter application and its engine shell are this project's code under
+  the AGPL. Flutter itself is BSD-3-Clause (https://flutter.dev/).
+- The Gradle wrapper scripts and `gradle-wrapper.jar` under `app/android`
+  are Gradle's, Apache-2.0 (https://gradle.org/).
+- Rust crate licenses are enforced by `core/deny.toml`. Copyleft dependencies
+  other than this project's own crates are refused.
+
+## Not included
+
+CoTracker3 and MMAudio are CC-BY-NC and are not dependencies.
+World Monitor and LosslessCut are not included; the memory map borrows a
+look only, and lossless export follows an idea only.

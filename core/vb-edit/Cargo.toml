@@ -1,0 +1,14 @@
+[package]
+name = "vb-edit"
+description = "The built-in editor's operations on an Editing DSL: split, trim, move, delete, speed, sound, transitions, text, music, framing. Every one takes a valid cut to a valid cut, in the contract's own terms."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+
+[dependencies]
+vb-contracts.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true

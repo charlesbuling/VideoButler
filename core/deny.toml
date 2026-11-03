@@ -1,0 +1,91 @@
+# cargo-deny: license policy for the Rust dependency tree.
+#
+# This covers Rust crates only. The two dependencies that actually block a
+# paid release, CoTracker3 and MMAudio, are model weights rather than crates,
+# so cargo-deny cannot see them; scripts/check-licenses.sh guards those.
+#
+# Model weights the app downloads are checked separately, in the catalogue in
+# vb-pipeline/src/models.rs: every entry there carries its licence, and a
+# non-commercial one does not belong in it.
+
+[licenses]
+# Permissive licenses only. Anything copyleft reaching a shipped build is a
+# problem we want to find before a push, not at release time.
+allow = [
+    "MIT",
+    # MIT without the attribution clause, so strictly more permissive than
+    # MIT. Arrives through jsonschema (borrow-or-share, via fluent-uri).
+    "MIT-0",
+    "Apache-2.0",
+    "Apache-2.0 WITH LLVM-exception",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "ISC",
+    "Unicode-3.0",
+    "Zlib",
+    "CC0-1.0",
+    "MPL-2.0",
+    # The Mozilla CA root bundle, which arrives through ureq in vb-cloud. It
+    # is a data licence rather than a code one -- the bundle is a list of
+    # certificates -- and it is permissive: use, modify and redistribute, with
+    # no copyleft and no attribution requirement on the software. A TLS client
+    # needs roots from somewhere, and the alternative is the platform trust
+    # store, which Android cannot supply without vendoring OpenSSL.
+    "CDLA-Permissive-2.0",
+    # whisper-rs and whisper-rs-sys, the bindings to whisper.cpp in vb-whisper.
+    # A public-domain dedication, OSI-approved and more permissive than MIT;
+    # the whisper.cpp source the bindings compile is itself MIT.
+    "Unlicense",
+]
+confidence-threshold = 0.9
+
+# This project's own crates carry its licence, AGPL-3.0-or-later (LICENSE). It is
+# allowed for them by name and nowhere else: a dependency under the AGPL, or
+# any copyleft, is still refused, because the owner keeps the right to
+# license the project otherwise, and code under someone else's copyleft would
+# take that away.
+exceptions = [
+    { allow = ["AGPL-3.0-or-later"], crate = "vb-contracts" },
+    { allow = ["AGPL-3.0-or-later"], crate = "vb-media" },
+    { allow = ["AGPL-3.0-or-later"], crate = "vb-geo" },
+    { allow = ["AGPL-3.0-or-later"], crate = "vb-infer" },
+    { allow = ["AGPL-3.0-or-later"], crate = "vb-narrative" },
+    { allow = ["AGPL-3.0-or-later"], crate = "vb-perception" },
+    { allow = ["AGPL-3.0-or-later"], crate = "vb-export" },
+    { allow = ["AGPL-3.0-or-later"], crate = "vb-render" },
+    { allow = ["AGPL-3.0-or-later"], crate = "vb-text" },
+    { allow = ["AGPL-3.0-or-later"], crate = "vb-edit" },
+    { allow = ["AGPL-3.0-or-later"], crate = "vb-cloud" },
+    { allow = ["AGPL-3.0-or-later"], crate = "vb-apple" },
+    { allow = ["AGPL-3.0-or-later"], crate = "vb-whisper" },
+    { allow = ["AGPL-3.0-or-later"], crate = "vb-onnx" },
+    { allow = ["AGPL-3.0-or-later"], crate = "vb-llama" },
+    { allow = ["AGPL-3.0-or-later"], crate = "vb-llama-engine" },
+    { allow = ["AGPL-3.0-or-later"], crate = "vb-pipeline" },
+    { allow = ["AGPL-3.0-or-later"], crate = "vb-cli" },
+    { allow = ["AGPL-3.0-or-later"], crate = "vb-ffi" },
+]
+
+[bans]
+multiple-versions = "warn"
+wildcards = "deny"
+
+deny = [
+    # An HTTP client may only enter through vb-infer, where an optional cloud
+    # adapter would legitimately live. Anywhere else it means some library has
+    # quietly given the offline engine a way onto the network, which is how
+    # jsonschema's default features once pulled one in.
+    { crate = "reqwest", wrappers = ["vb-cloud"], reason = "network access belongs behind an adapter" },
+    { crate = "hyper", wrappers = ["reqwest"], reason = "network access belongs behind an adapter" },
+    # The same rule for the client actually used: vb-cloud is the one crate
+    # allowed to reach the network, and an HTTP client appearing anywhere else
+    # means the offline guarantee has quietly stopped being structural.
+    { crate = "ureq", wrappers = ["vb-cloud"], reason = "network access belongs behind an adapter" },
+]
+
+[advisories]
+yanked = "deny"
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"

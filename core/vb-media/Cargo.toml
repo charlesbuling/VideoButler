@@ -1,0 +1,27 @@
+[package]
+name = "vb-media"
+description = "Media I/O behind the MediaBackend trait. The ffmpeg CLI backend is desktop-only; the linked-libav backend runs in-process, which is what mobile needs."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+
+[dependencies]
+vb-contracts.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+time.workspace = true
+kamadak-exif.workspace = true
+
+[features]
+# The in-process libav backend. Off by default because it needs ffmpeg's
+# development libraries at build time. Any build that must analyse video
+# without spawning a process -- every mobile build -- turns it on.
+libav = ["dep:cc", "dep:pkg-config"]
+
+[build-dependencies]
+cc = { workspace = true, optional = true }
+pkg-config = { workspace = true, optional = true }

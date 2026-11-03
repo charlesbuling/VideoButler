@@ -1,0 +1,18 @@
+[package]
+name = "vb-cloud"
+description = "The only crate that touches the network: model downloads and OpenAI-compatible adapters. Everything here is optional to a run, because the offline path is the product's guarantee."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+
+[dependencies]
+vb-contracts.workspace = true
+vb-infer.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+ureq = { version = "2.12", features = ["json"] }
+sha2 = "0.10"

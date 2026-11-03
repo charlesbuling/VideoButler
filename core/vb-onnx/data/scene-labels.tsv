@@ -1,0 +1,154 @@
+# Scene labels for the SigLIP 2 labeller (vb-onnx/src/labels.rs), in the
+# order of the rows of scene-labels.f32, which scripts/make-scene-labels.sh
+# makes from this file. Edit here, run the script, commit both.
+#
+# label: what a description says, in English as Apple Vision's labels are.
+# zh: the same in Chinese. kind: place, subject or activity -- one of each at
+# most is said about a picture. The last column is what the prompt names:
+# "this is a photo of <it>.", and for places and subjects also "this is a
+# photo with <it> in the background.", averaged.
+#
+# Chosen for family and travel footage, and checked against 92 frames of two
+# real sets (a Xinjiang trip, a baby's first year) looked at one by one.
+beach	海滩	place	a beach
+sea	大海	place	the sea
+lake	湖边	place	a lake
+river	河边	place	a river
+waterfall	瀑布	place	a waterfall
+mountains	山	place	mountains
+snowy mountains	雪山	place	snowy mountains
+hills	山坡	place	grassy hills
+grassland	草原	place	a grassland
+desert	沙漠	place	a desert
+forest	树林	place	a forest
+farmland	田野	place	farmland
+flower field	花海	place	a field of flowers
+garden	花园	place	a garden
+park	公园	place	a park
+playground	游乐场	place	a playground
+amusement park	游乐园	place	an amusement park
+street	街道	place	a city street
+old town	老街	place	an old town street
+square	广场	place	a city square
+market	集市	place	a market
+shopping mall	商场	place	a shopping mall
+shop	商店	place	the inside of a shop
+restaurant	餐厅	place	a restaurant
+cafe	咖啡馆	place	a cafe
+kitchen	厨房	place	a kitchen
+living room	客厅	place	a living room
+bedroom	卧室	place	a bedroom
+bathroom	浴室	place	a bathroom
+office	办公室	place	an office
+classroom	教室	place	a classroom
+hospital	医院	place	a hospital room
+gym	健身房	place	a gym
+swimming pool	泳池	place	a swimming pool
+stadium	体育场	place	a stadium
+stage	舞台	place	a stage with performers
+temple	寺庙	place	a temple
+church	教堂	place	a church
+mosque	清真寺	place	a mosque
+museum	博物馆	place	a museum
+zoo	动物园	place	a zoo
+aquarium	水族馆	place	an aquarium
+farm	农场	place	a farm
+village	村庄	place	a village
+road	公路	place	a road through the countryside
+bridge	桥	place	a bridge
+parking lot	停车场	place	a parking lot
+airport	机场	place	an airport terminal
+airplane cabin	机舱	place	the cabin of an airplane
+view from a plane	飞机窗外	place	the view from an airplane window
+train	火车	place	the inside of a train
+train station	车站	place	a train station
+car interior	车里	place	the inside of a car
+view from a car	车窗外	place	the view through a car windscreen
+boat	船	place	a boat on the water
+hotel room	酒店房间	place	a hotel room
+tent	帐篷	place	a tent at a campsite
+city at night	城市夜景	place	a city at night
+fireworks	烟花	place	fireworks
+sunset	日落	place	a sunset
+sunrise	日出	place	a sunrise
+night sky	夜空	place	the night sky
+blue sky	蓝天	place	a blue sky with clouds
+rain	雨天	place	a rainy day
+snow	雪景	place	snow on the ground
+building	楼房	place	a building
+tower	塔	place	a tower
+old building	古建筑	place	a historic building
+statue	雕像	place	a statue
+painting	画	place	a painting on a wall
+sign	招牌	place	a sign with writing
+lanterns	灯笼	place	lanterns lit up at night
+festival	节日	place	a festival
+baby	婴儿	subject	a baby
+toddler	幼儿	subject	a toddler
+child	孩子	subject	a child
+children	孩子们	subject	a group of children
+teenager	少年	subject	a teenager
+couple	情侣	subject	a couple
+family	一家人	subject	a family together
+group of people	一群人	subject	a group of people
+crowd	人群	subject	a crowd of people
+elderly person	老人	subject	an elderly person
+man	男人	subject	a man
+woman	女人	subject	a woman
+selfie	自拍	subject	a selfie
+portrait	人像	subject	a portrait of a person
+dog	狗	subject	a dog
+cat	猫	subject	a cat
+horse	马	subject	a horse
+sheep	羊	subject	sheep
+cow	牛	subject	a cow
+camel	骆驼	subject	a camel
+bird	鸟	subject	a bird
+fish	鱼	subject	fish
+flowers	花	subject	flowers
+trees	树	subject	trees
+cake	蛋糕	subject	a cake
+food	美食	subject	a plate of food
+fruit	水果	subject	fruit
+noodles	面条	subject	a bowl of noodles
+barbecue	烧烤	subject	barbecue on a grill
+drinks	饮料	subject	drinks on a table
+toys	玩具	subject	toys
+balloons	气球	subject	balloons
+book	书	subject	a book
+screen	屏幕	subject	a screen showing a picture
+car	汽车	subject	a car
+bicycle	自行车	subject	a bicycle
+motorcycle	摩托车	subject	a motorcycle
+bus	公交车	subject	a bus
+dancing	跳舞	activity	people dancing
+singing	唱歌	activity	a person singing
+playing music	演奏	activity	a person playing a musical instrument
+eating	吃饭	activity	people eating a meal
+cooking	做饭	activity	a person cooking
+walking	散步	activity	people walking
+running	奔跑	activity	a person running
+hiking	徒步	activity	people hiking on a trail
+climbing	攀爬	activity	a person climbing
+swimming	游泳	activity	a person swimming
+playing in water	玩水	activity	a child playing in water
+skiing	滑雪	activity	a person skiing
+skating	滑冰	activity	a person skating
+cycling	骑车	activity	a person riding a bicycle
+riding a horse	骑马	activity	a person riding a horse
+driving	开车	activity	a person driving a car
+football	足球	activity	people playing football
+basketball	篮球	activity	people playing basketball
+playing	玩耍	activity	a child playing
+crawling	爬行	activity	a baby crawling
+sleeping	睡觉	activity	a person sleeping
+bath time	洗澡	activity	a baby having a bath
+hugging	拥抱	activity	people hugging
+laughing	欢笑	activity	a person laughing
+crying	哭	activity	a child crying
+taking photos	拍照	activity	a person taking a photo
+shopping	购物	activity	people shopping
+reading	读书	activity	a person reading
+birthday party	生日会	activity	a birthday party
+wedding	婚礼	activity	a wedding
+performance	表演	activity	a performance on stage

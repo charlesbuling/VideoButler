@@ -1,0 +1,522 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://videobutler.dev/contracts/footage-graph/0.1/schema.json",
+  "title": "Footage Graph",
+  "description": "Input Contract of the narrative layer (dev doc SV.1). The perception stack writes it; the narrative layer reads it and nothing else. Upgrading perception -- including Phase 2's 主体衔接 (subject continuity) -- may only enrich this document, never change its shape.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "generatedAt", "sources", "shots"],
+  "properties": {
+    "schemaVersion": {
+      "const": "footage-graph/0.1"
+    },
+    "generatedAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "projectId": {
+      "$ref": "#/$defs/id",
+      "description": "Stable identifier for the editing project this graph belongs to."
+    },
+    "sources": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/source" }
+    },
+    "shots": {
+      "type": "array",
+      "description": "Ordered by sourceId then startUs. The compressed storyboard that reaches the LLM (dev doc S6.1); raw frames never do.",
+      "items": { "$ref": "#/$defs/shot" }
+    },
+    "entities": {
+      "type": "array",
+      "description": "Persistent cross-shot identities (dev doc S6.2 bottleneck 1). An entityId means the same subject everywhere it appears.",
+      "items": { "$ref": "#/$defs/entity" }
+    },
+    "transcript": {
+      "type": "array",
+      "description": "Timestamped ASR output, aligned to the same microsecond timebase as shots (dev doc S6.2 bottleneck 5).",
+      "items": { "$ref": "#/$defs/transcriptSegment" }
+    },
+    "scenes": {
+      "type": "array",
+      "description": "Segments grouped by the place or view they show, across every source. A cut that moves between scenes rather than along file order is built from these.",
+      "items": { "$ref": "#/$defs/scene" }
+    },
+    "priors": {
+      "$ref": "#/$defs/minedPriors"
+    },
+    "provenance": {
+      "type": "array",
+      "description": "One entry per pipeline stage that contributed. Drives incremental reuse: a stage whose paramsHash is unchanged is not re-run (dev doc SIV).",
+      "items": { "$ref": "#/$defs/provenanceEntry" }
+    }
+  },
+  "$defs": {
+    "id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[A-Za-z0-9_.:-]+$"
+    },
+    "us": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Microseconds. The canonical timebase for every contract in this project. Integer microseconds avoid float drift and convert exactly to CapCut (native us) and, via each source's rational fps, to OTIO and FCPXML frame counts."
+    },
+    "unitScore": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "path", "contentHash", "durationUs"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "path": {
+          "type": "string",
+          "description": "Absolute path on the device that produced the graph. Never sent off-device."
+        },
+        "contentHash": {
+          "type": "string",
+          "pattern": "^blake3:[0-9a-f]{64}$",
+          "description": "Content address of the media. The first component of every cache key."
+        },
+        "mediaKind": {
+          "enum": ["video", "image"],
+          "description": "A moving picture or a photograph. Absent means video, which is every source written before photographs were read."
+        },
+        "durationUs": {
+          "$ref": "#/$defs/us",
+          "description": "How long the video runs. A photograph has no running time of its own: for an image this is the longest it may be held on screen, and the source has one shot, of this length, that shows the same picture throughout."
+        },
+        "fpsNum": { "type": "integer", "minimum": 1 },
+        "fpsDen": { "type": "integer", "minimum": 1 },
+        "width": { "type": "integer", "minimum": 1 },
+        "height": { "type": "integer", "minimum": 1 },
+        "videoCodec": { "type": "string" },
+        "audioCodec": { "type": "string" },
+        "hasAudio": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "rotation": {
+          "type": "integer",
+          "enum": [0, 90, 180, 270],
+          "description": "The clockwise turn that shows the picture upright. A phone held upright records on its side and says so; width and height are as stored, before the turn."
+        },
+        "categories": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "enum": ["people", "children", "gathering", "scenery", "food", "animals", "transport", "electronics", "study", "livestream"]
+          },
+          "description": "What the video is of, as the video butler classifies it from a few frames: scene labels and the faces found in them. `people` means someone is a subject of it -- a face large enough not to be a passer-by. A reading, not a recognition, and the order of a cut that sorts by it (a year's memories: people, then scenery, then food, then the rest) is only as right as these are. Absent when the video was not classified."
+        }
+      }
+    },
+    "shot": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "sourceId", "startUs", "endUs"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "sourceId": { "$ref": "#/$defs/id" },
+        "startUs": { "$ref": "#/$defs/us" },
+        "endUs": { "$ref": "#/$defs/us" },
+        "shotChangeConfidence": { "$ref": "#/$defs/unitScore" },
+        "keyframes": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/keyframe" }
+        },
+        "description": {
+          "$ref": "#/$defs/description",
+          "description": "Dense visual description from the VLM adapter. Absent until the describe stage runs."
+        },
+        "entityRefs": {
+          "type": "array",
+          "description": "Entities appearing in this shot, by id. The entity itself is defined once in the top-level entities array.",
+          "items": { "$ref": "#/$defs/id" }
+        },
+        "actions": {
+          "type": "array",
+          "description": "Who did what to whom (dev doc S6.2 bottleneck 3). Produced by dedicated detectors, not inferred by the LLM from stills.",
+          "items": { "$ref": "#/$defs/action" }
+        },
+        "audio": { "$ref": "#/$defs/shotAudio" },
+        "tags": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "segments": {
+          "type": "array",
+          "description": "The shot followed from start to end and divided where the view changes: a pan to somewhere new, the camera settling, the scene turning over. Tiles the shot in order. A continuous phone take is one shot and often several segments.",
+          "items": { "$ref": "#/$defs/segment" }
+        },
+        "timeline": {
+          "type": "array",
+          "description": "Measurements taken across the whole shot, about two a second, in time order. What lets an in or out point be placed where the picture is steady and the action at rest, rather than wherever a fixed trim falls.",
+          "items": { "$ref": "#/$defs/timelineSample" }
+        }
+      }
+    },
+    "segment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "startUs", "endUs"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "startUs": { "$ref": "#/$defs/us" },
+        "endUs": { "$ref": "#/$defs/us" },
+        "usableStartUs": {
+          "$ref": "#/$defs/us",
+          "description": "Where the usable part of the segment begins: past the start of recording, a camera still settling, a whip pan. Absent, with usableEndUs, when none of it is usable."
+        },
+        "usableEndUs": { "$ref": "#/$defs/us" },
+        "sceneId": {
+          "$ref": "#/$defs/id",
+          "description": "The scene this segment shows, one of the top-level scenes. Segments of one scene may come from different sources."
+        },
+        "quality": {
+          "$ref": "#/$defs/unitScore",
+          "description": "How good the usable part looks: sharpness, exposure and steadiness together."
+        },
+        "camera": { "$ref": "#/$defs/cameraMotion" },
+        "keyframeId": {
+          "$ref": "#/$defs/id",
+          "description": "The keyframe, among the shot's, that best represents this segment."
+        },
+        "description": {
+          "$ref": "#/$defs/description",
+          "description": "What the segment shows, from the VLM adapter over its keyframe."
+        },
+        "signature": {
+          "type": "array",
+          "description": "A small colour-and-layout vector of the segment's view, comparable between segments of any source. How scenes are grouped.",
+          "items": { "type": "number" }
+        },
+        "occlusion": {
+          "$ref": "#/$defs/unitScore",
+          "description": "How much of the picture a near-plane occluder covers at the segment's keyframe -- a car door, a dashboard, a sleeve against the lens -- read from depth, with people who are the subject excluded. Absent when no depth model ran."
+        },
+        "composition": {
+          "$ref": "#/$defs/unitScore",
+          "description": "How well the segment's keyframe is composed, from the composition model: its 1-5 rating mapped onto 0..1. Only the moments shortlisted for a cut are judged; absent for the rest, and when no composition model ran."
+        },
+        "caption": {
+          "$ref": "#/$defs/description",
+          "description": "A sentence for the screen, in the viewer's language, saying what the segment shows: written by a general vision-language model over its keyframe. Only the moments a cut uses are captioned; absent for the rest, and when no such model ran."
+        },
+        "people": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "How many people the pose model found at the segment's keyframe. Absent when no pose model ran."
+        },
+        "poses": {
+          "type": "array",
+          "description": "Body poses through the usable part, sampled where a dance cut may join this segment to another: how the movement carries across the cut. Only moments a dance cut may use are sampled.",
+          "items": { "$ref": "#/$defs/poseSample" }
+        },
+        "rhythm": { "$ref": "#/$defs/rhythm" }
+      }
+    },
+    "cameraMotion": {
+      "type": "string",
+      "enum": ["still", "steady", "panning", "shaky"],
+      "description": "How the camera moved over the usable part: held still, moving smoothly (walking, tracking), sweeping across the view, or shaking."
+    },
+    "timelineSample": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["atUs"],
+      "properties": {
+        "atUs": { "$ref": "#/$defs/us" },
+        "quality": {
+          "$ref": "#/$defs/unitScore",
+          "description": "How usable the picture is at this moment."
+        },
+        "motion": {
+          "$ref": "#/$defs/unitScore",
+          "description": "How much the picture changes here once the camera's own movement is taken out: people and things moving. Low values are the rests between actions."
+        },
+        "camera": {
+          "$ref": "#/$defs/unitScore",
+          "description": "How fast the camera itself moves here, as a share of the frame per second."
+        }
+      }
+    },
+    "scene": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "label": {
+          "type": "string",
+          "description": "A short human-readable name, from what the segments' descriptions share."
+        },
+        "segmentIds": { "type": "array", "items": { "$ref": "#/$defs/id" } }
+      }
+    },
+    "keyframe": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "atUs"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "atUs": { "$ref": "#/$defs/us" },
+        "path": {
+          "type": "string",
+          "description": "Cache-relative path to the extracted still."
+        },
+        "scores": { "$ref": "#/$defs/keyframeScores" }
+      }
+    },
+    "keyframeScores": {
+      "type": "object",
+      "description": "Classical-CV selection metrics (dev doc S6.1). Computed without invoking any model, and the basis of preferred-frame selection.",
+      "additionalProperties": false,
+      "properties": {
+        "sharpness": {
+          "$ref": "#/$defs/unitScore",
+          "description": "Normalised Laplacian variance."
+        },
+        "flowJitter": {
+          "$ref": "#/$defs/unitScore",
+          "description": "Optical-flow instability. Lower is steadier."
+        },
+        "faceQuality": {
+          "$ref": "#/$defs/unitScore",
+          "description": "Eye-openness and expression, when a face is present."
+        },
+        "composition": { "$ref": "#/$defs/unitScore" },
+        "exposure": { "$ref": "#/$defs/unitScore" },
+        "aggregate": {
+          "$ref": "#/$defs/unitScore",
+          "description": "Weighted roll-up the selector ranks on."
+        }
+      }
+    },
+    "description": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["text"],
+      "properties": {
+        "text": { "type": "string" },
+        "model": { "type": "string" },
+        "confidence": { "$ref": "#/$defs/unitScore" }
+      }
+    },
+    "entity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "kind"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "kind": {
+          "enum": ["person", "animal", "object", "place", "text", "other"]
+        },
+        "label": { "type": "string" },
+        "firstSeenUs": { "$ref": "#/$defs/us" },
+        "lastSeenUs": { "$ref": "#/$defs/us" },
+        "shotIds": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/id" }
+        },
+        "confidence": { "$ref": "#/$defs/unitScore" },
+        "tracker": {
+          "type": "string",
+          "description": "Which TrackerAdapter produced this identity. Phase 2 replaces the value, not the field."
+        },
+        "thumbnailPath": {
+          "type": "string",
+          "description": "A still of this subject, relative to the analysis work directory, for showing the subject to a user."
+        },
+        "signature": {
+          "type": "array",
+          "items": { "type": "number" },
+          "description": "An appearance embedding for grouping the same subject across clips and projects. A similarity measure, not an identity claim."
+        }
+      }
+    },
+    "action": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["verb", "startUs", "endUs"],
+      "properties": {
+        "verb": { "type": "string" },
+        "actorEntityId": { "$ref": "#/$defs/id" },
+        "targetEntityId": { "$ref": "#/$defs/id" },
+        "startUs": { "$ref": "#/$defs/us" },
+        "endUs": { "$ref": "#/$defs/us" },
+        "confidence": { "$ref": "#/$defs/unitScore" }
+      }
+    },
+    "shotAudio": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "loudnessLufs": { "type": "number" },
+        "hasSpeech": { "type": "boolean" },
+        "musicEnergy": { "$ref": "#/$defs/unitScore" },
+        "silenceRatio": { "$ref": "#/$defs/unitScore" }
+      }
+    },
+    "transcriptSegment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "sourceId", "startUs", "endUs", "text"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "sourceId": { "$ref": "#/$defs/id" },
+        "startUs": { "$ref": "#/$defs/us" },
+        "endUs": { "$ref": "#/$defs/us" },
+        "text": { "type": "string" },
+        "speaker": { "type": "string" },
+        "language": { "type": "string" },
+        "confidence": { "$ref": "#/$defs/unitScore" }
+      }
+    },
+    "minedPriors": {
+      "type": "object",
+      "description": "Statistical Prior Layer output (dev doc S6.3.1): quantifiable patterns mined from the footage itself.",
+      "additionalProperties": false,
+      "properties": {
+        "shotLength": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "meanUs": { "$ref": "#/$defs/us" },
+            "medianUs": { "$ref": "#/$defs/us" },
+            "p10Us": { "$ref": "#/$defs/us" },
+            "p90Us": { "$ref": "#/$defs/us" }
+          }
+        },
+        "beatGrid": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "bpm": { "type": "number", "exclusiveMinimum": 0 },
+            "firstBeatUs": { "$ref": "#/$defs/us" },
+            "confidence": { "$ref": "#/$defs/unitScore" },
+            "origin": {
+              "enum": ["music", "source", "fixed"],
+              "description": "Detected in music the user chose, detected in the footage's own audio, or a steady tempo applied because there was nothing to detect. A fixed grid is a pacing choice, not a measurement, and must be reported as one."
+            },
+            "assetPath": {
+              "type": "string",
+              "description": "The audio file the grid was mined from, when it is music the user chose. Absolute."
+            },
+            "assetDurationUs": {
+              "$ref": "#/$defs/us",
+              "description": "How long that audio file runs, so a music track laid under the cut never outruns it."
+            }
+          }
+        },
+        "transitionFrequency": {
+          "type": "object",
+          "additionalProperties": { "type": "number" }
+        }
+      }
+    },
+    "provenanceEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["stage", "paramsHash"],
+      "properties": {
+        "stage": {
+          "enum": ["probe", "shotDetect", "keyframes", "cvScore", "director", "asr", "describe", "track", "minePriors", "judge", "pose", "caption"]
+        },
+        "tool": { "type": "string" },
+        "toolVersion": { "type": "string" },
+        "adapter": {
+          "type": "string",
+          "description": "Which adapter implementation ran, e.g. MockAsr or WhisperCpp. Mock output must never be mistaken for real output."
+        },
+        "paramsHash": {
+          "type": "string",
+          "pattern": "^blake3:[0-9a-f]{64}$"
+        },
+        "completedAt": { "type": "string", "format": "date-time" },
+        "durationMs": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "rhythm": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["bpm", "beatsUs"],
+      "description": "The beat the people in the segment move to, read from their poses where a 主体衔接 cut may follow them: its tempo, how clearly they keep it, every beat they hit, and the stretches that are not dancing -- anyone of them standing still for more than one and a half beats, someone watching what they hold in their hands, and moving with no beat at all. Times are the source's own.",
+      "properties": {
+        "bpm": { "type": "number", "exclusiveMinimum": 0 },
+        "confidence": {
+          "$ref": "#/$defs/unitScore",
+          "description": "How regularly the movement comes back to the beat: 0 is none, 1 a metronome."
+        },
+        "beatsUs": {
+          "type": "array",
+          "description": "Every beat the movement hits, in order.",
+          "items": { "$ref": "#/$defs/us" }
+        },
+        "idle": {
+          "type": "array",
+          "description": "Where any one of the people stands still for more than one and a half beats -- read person by person, so a dancer waiting while the other dances is idle too.",
+          "items": { "$ref": "#/$defs/span" }
+        },
+        "watching": {
+          "type": "array",
+          "description": "Where someone keeps a hand held still in front of their chest for most of four bars, as a person does watching a phone with the steps on it: learning the dance, or watching it, not dancing.",
+          "items": { "$ref": "#/$defs/span" }
+        },
+        "unrhythmic": {
+          "type": "array",
+          "description": "Where they move, but to no beat.",
+          "items": { "$ref": "#/$defs/span" }
+        }
+      }
+    },
+    "span": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["startUs", "endUs"],
+      "properties": {
+        "startUs": { "$ref": "#/$defs/us" },
+        "endUs": { "$ref": "#/$defs/us" }
+      }
+    },
+    "poseSample": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["atUs"],
+      "properties": {
+        "atUs": { "$ref": "#/$defs/us" },
+        "people": { "type": "array", "items": { "$ref": "#/$defs/personPose" } }
+      }
+    },
+    "personPose": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["box", "score", "keypoints"],
+      "description": "One person in a frame. Coordinates are fractions of the upright frame, 0 at the left and top.",
+      "properties": {
+        "box": {
+          "type": "array",
+          "description": "Left, top, right, bottom.",
+          "items": { "type": "number" },
+          "minItems": 4,
+          "maxItems": 4
+        },
+        "score": { "$ref": "#/$defs/unitScore" },
+        "keypoints": {
+          "type": "array",
+          "description": "The seventeen COCO body keypoints in order -- nose, eyes, ears, shoulders, elbows, wrists, hips, knees, ankles -- each x, y and the model's confidence.",
+          "items": {
+            "type": "array",
+            "items": { "type": "number" },
+            "minItems": 3,
+            "maxItems": 3
+          }
+        }
+      }
+    }
+  }
+}

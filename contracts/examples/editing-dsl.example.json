@@ -1,0 +1,281 @@
+{
+  "schemaVersion": "editing-dsl/0.1",
+  "generatedAt": "2026-09-19T12:01:00Z",
+  "footageGraphRef": {
+    "projectId": "demo-hike",
+    "graphHash": "blake3:a1b2c3d4a1b2c3d4a1b2c3d4a1b2c3d4a1b2c3d4a1b2c3d4a1b2c3d4a1b2c3d4"
+  },
+  "meta": {
+    "title": "Hike rough cut",
+    "targetDurationUs": 20000000,
+    "aspectRatio": "9:16",
+    "fpsNum": 30000,
+    "fpsDen": 1001,
+    "templateId": "rhythm.upbeat-montage",
+    "variantId": "v1",
+    "locale": "en-US"
+  },
+  "slots": [
+    {
+      "id": "slot-1",
+      "order": 0,
+      "kind": "titleCard",
+      "durationUs": 2000000,
+      "reason": "Template rhythm.upbeat-montage opens on a title card."
+    },
+    {
+      "id": "slot-2",
+      "order": 1,
+      "kind": "clip",
+      "durationUs": 6000000,
+      "sourceRef": {
+        "sourceId": "src-01",
+        "shotId": "shot-01",
+        "inUs": 2000000,
+        "outUs": 8000000
+      },
+      "speed": 1.0,
+      "reason": "Highest-scoring establishing shot; sharpness 0.82 and low flow jitter.",
+      "score": 0.76
+    },
+    {
+      "id": "slot-3",
+      "order": 2,
+      "kind": "clip",
+      "durationUs": 3500000,
+      "sourceRef": {
+        "sourceId": "src-01",
+        "shotId": "shot-02",
+        "inUs": 16000000,
+        "outUs": 19500000
+      },
+      "speed": 1.0,
+      "reason": "Only shot containing speech; carries the spoken beat.",
+      "score": 0.86
+    },
+    {
+      "id": "slot-4",
+      "order": 3,
+      "kind": "clip",
+      "durationUs": 5000000,
+      "sourceRef": {
+        "sourceId": "src-01",
+        "shotId": "shot-03",
+        "inUs": 38000000,
+        "outUs": 43000000
+      },
+      "speed": 1.0,
+      "reason": "Strongest composition score; closes on the landscape.",
+      "score": 0.62
+    }
+  ],
+  "tracks": {
+    "video": [
+      {
+        "slotId": "slot-2",
+        "crop": {
+          "x": 0.25,
+          "y": 0.0,
+          "w": 0.5,
+          "h": 1.0
+        },
+        "filters": [
+          {
+            "name": "eq",
+            "params": {
+              "contrast": 1.05,
+              "saturation": 1.1
+            }
+          }
+        ]
+      },
+      {
+        "slotId": "slot-3",
+        "transform": {
+          "keyframes": [
+            {
+              "offsetUs": 0,
+              "scale": 1.25,
+              "x": -0.06,
+              "y": 0.04,
+              "rotationDeg": 2.5
+            },
+            {
+              "offsetUs": 3500000,
+              "scale": 1.0
+            }
+          ]
+        }
+      },
+      {
+        "slotId": "slot-4",
+        "crop": {
+          "x": 0.25,
+          "y": 0.0,
+          "w": 0.5,
+          "h": 1.0
+        },
+        "background": {
+          "kind": "blur"
+        }
+      }
+    ],
+    "text": [
+      {
+        "id": "txt-title",
+        "anchor": {
+          "slotId": "slot-1",
+          "offsetUs": 0
+        },
+        "durationUs": 2000000,
+        "content": "Morning trail",
+        "role": "title",
+        "style": {
+          "fontFamily": "Inter",
+          "fontSizePt": 48.0,
+          "primaryColor": "#FFFFFF",
+          "outlineColor": "#000000",
+          "outlineWidth": 2.0,
+          "alignment": "middleCenter"
+        }
+      },
+      {
+        "id": "txt-sub-1",
+        "anchor": {
+          "slotId": "slot-3",
+          "offsetUs": 200000
+        },
+        "durationUs": 2900000,
+        "content": "Okay, that is about halfway up.",
+        "role": "subtitle",
+        "transcriptSegmentId": "tr-01",
+        "style": {
+          "fontFamily": "Inter",
+          "fontSizePt": 28.0,
+          "primaryColor": "#FFFFFF",
+          "outlineColor": "#000000",
+          "outlineWidth": 1.5,
+          "alignment": "bottomCenter",
+          "marginVPct": 0.08
+        }
+      },
+      {
+        "id": "txt-user-1",
+        "anchor": {
+          "slotId": "slot-4",
+          "offsetUs": 500000
+        },
+        "durationUs": 3000000,
+        "content": "山顶到了",
+        "role": "caption",
+        "style": {
+          "fontSizePt": 36.0,
+          "primaryColor": "#FFE066",
+          "bold": true,
+          "backgroundColor": "#00000099",
+          "alignment": "middleCenter",
+          "x": 0.5,
+          "y": 0.3
+        }
+      }
+    ],
+    "audio": [
+      {
+        "id": "aud-bgm",
+        "anchor": {
+          "slotId": "slot-1",
+          "offsetUs": 0
+        },
+        "kind": "bgm",
+        "durationUs": 16500000,
+        "assetPath": "assets/bgm/upbeat-01.m4a",
+        "assetInUs": 240000,
+        "gainDb": -12.0,
+        "fadeInUs": 800000,
+        "fadeOutUs": 1200000,
+        "ducking": {
+          "enabled": true,
+          "targetGainDb": -22.0,
+          "thresholdDb": -30.0
+        }
+      },
+      {
+        "id": "aud-src-3",
+        "anchor": {
+          "slotId": "slot-3",
+          "offsetUs": 0
+        },
+        "kind": "source",
+        "durationUs": 3500000,
+        "gainDb": 0.0
+      },
+      {
+        "id": "aud-src-2",
+        "anchor": {
+          "slotId": "slot-2",
+          "offsetUs": 0
+        },
+        "kind": "source",
+        "durationUs": 6000000,
+        "gainDb": -6.0,
+        "muted": true
+      }
+    ]
+  },
+  "transitions": [
+    {
+      "fromSlotId": "slot-1",
+      "toSlotId": "slot-2",
+      "type": "fadeToBlack",
+      "durationUs": 500000
+    },
+    {
+      "fromSlotId": "slot-2",
+      "toSlotId": "slot-3",
+      "type": "cut",
+      "durationUs": 0
+    },
+    {
+      "fromSlotId": "slot-3",
+      "toSlotId": "slot-4",
+      "type": "xfade",
+      "durationUs": 750000
+    }
+  ],
+  "grounding": [
+    {
+      "slotId": "slot-1",
+      "status": "verified"
+    },
+    {
+      "slotId": "slot-2",
+      "status": "verified",
+      "resolvedShotId": "shot-01",
+      "resolvedEntityIds": ["ent-hiker-1"]
+    },
+    {
+      "slotId": "slot-3",
+      "status": "verified",
+      "resolvedShotId": "shot-02",
+      "resolvedEntityIds": ["ent-hiker-1", "ent-bottle-1"]
+    },
+    {
+      "slotId": "slot-4",
+      "status": "verified",
+      "resolvedShotId": "shot-03",
+      "resolvedEntityIds": ["ent-hiker-1"]
+    }
+  ],
+  "provenance": {
+    "orchestrator": "montage-v0",
+    "inferenceAdapter": "MockInference",
+    "model": "none",
+    "templateId": "rhythm.upbeat-montage",
+    "priorsApplied": ["shotLength.median", "beatGrid.bpm"],
+    "paramsHash": "blake3:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+    "completedAt": "2026-09-19T12:01:00Z",
+    "editor": "video-butler-editor@0.2.0",
+    "editedAt": "2026-10-09T09:30:00Z",
+    "changeRatio": 0.18
+  }
+}

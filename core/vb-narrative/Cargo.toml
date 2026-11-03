@@ -1,0 +1,30 @@
+[package]
+name = "vb-narrative"
+description = "Prior Knowledge Base and Reasoning Orchestrator: Footage Graph in, Editing DSL out."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+
+# ---------------------------------------------------------------------------
+# THE MODULE WALL
+#
+# This list is closed. vb-narrative may depend on vb-contracts and vb-infer,
+# and on nothing else in the workspace -- not vb-media, not vb-perception, not
+# vb-render, not vb-export.
+#
+# The narrative layer is the part of this system that gets iterated on for
+# years, so it is insulated from platform and runtime churn by construction.
+# If narrative code needs something perception knows, that something belongs in
+# the Footage Graph schema, not in a new dependency here.
+#
+# A test in src/lib.rs re-reads this file and fails if the wall is breached.
+# ---------------------------------------------------------------------------
+[dependencies]
+vb-contracts.workspace = true
+vb-infer.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+tracing.workspace = true

@@ -1,0 +1,12 @@
+[package]
+name = "vb-geo"
+description = "Where footage was filmed, offline: which country, province and city a GPS fix falls in, and the world map the app draws, from Natural Earth's public-domain outlines."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true

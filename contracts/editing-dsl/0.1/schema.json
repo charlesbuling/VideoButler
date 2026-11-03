@@ -1,0 +1,456 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://videobutler.dev/contracts/editing-dsl/0.1/schema.json",
+  "title": "Editing DSL",
+  "description": "Output Contract of the narrative layer (dev doc SV.4). A decision manifest, never a flattened render -- this document IS the non-destructive guarantee of S1.2. The render and export layers consume it and may not write it.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "generatedAt", "meta", "slots"],
+  "properties": {
+    "schemaVersion": {
+      "const": "editing-dsl/0.1"
+    },
+    "generatedAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "footageGraphRef": {
+      "type": "object",
+      "description": "The exact graph this DSL was decided against. Re-grounding a DSL requires the graph it came from.",
+      "additionalProperties": false,
+      "required": ["projectId"],
+      "properties": {
+        "projectId": { "$ref": "#/$defs/id" },
+        "graphHash": {
+          "type": "string",
+          "pattern": "^blake3:[0-9a-f]{64}$"
+        }
+      }
+    },
+    "meta": { "$ref": "#/$defs/meta" },
+    "slots": {
+      "type": "array",
+      "minItems": 1,
+      "description": "The ordered spine of the edit. THE TIMELINE IS DERIVED FROM THIS ARRAY, NOT STORED. Nothing anywhere in this document records an absolute timeline position; see $defs.slot.",
+      "items": { "$ref": "#/$defs/slot" }
+    },
+    "tracks": { "$ref": "#/$defs/tracks" },
+    "transitions": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/transition" }
+    },
+    "grounding": {
+      "type": "array",
+      "description": "Proof that every decision resolves to real footage (dev doc S6.2 bottleneck 6). Written by the grounding gate, not by the model.",
+      "items": { "$ref": "#/$defs/groundingRecord" }
+    },
+    "provenance": { "$ref": "#/$defs/dslProvenance" }
+  },
+  "$defs": {
+    "id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[A-Za-z0-9_.:-]+$"
+    },
+    "us": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Microseconds. Same canonical timebase as footage-graph/0.1."
+    },
+    "unitScore": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "meta": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["title"],
+      "properties": {
+        "title": { "type": "string" },
+        "targetDurationUs": { "$ref": "#/$defs/us" },
+        "aspectRatio": {
+          "type": "string",
+          "pattern": "^[0-9]+:[0-9]+$"
+        },
+        "fpsNum": { "type": "integer", "minimum": 1 },
+        "fpsDen": { "type": "integer", "minimum": 1 },
+        "templateId": {
+          "$ref": "#/$defs/id",
+          "description": "Which PriorStore template produced this cut."
+        },
+        "variantId": {
+          "$ref": "#/$defs/id",
+          "description": "Which of the N style variants this is (dev doc S6.3.3)."
+        },
+        "locale": { "type": "string" }
+      }
+    },
+    "slot": {
+      "type": "object",
+      "description": "One position on the spine. A slot declares its own duration and its source footage, and NEVER its position on the finished timeline. Absolute time is computed by the renderer, walking slots in order and subtracting transition overlap. This is the direct fix for the drift recorded in dev doc SIX: the DSL timeline is not the render timeline, so the DSL does not pretend to know render time.",
+      "additionalProperties": false,
+      "required": ["id", "order", "kind", "durationUs"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "order": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Position in the spine. Unique across slots. Gaps are allowed so slots can be reordered without renumbering."
+        },
+        "kind": {
+          "enum": ["clip", "titleCard", "gap"]
+        },
+        "durationUs": {
+          "$ref": "#/$defs/us",
+          "exclusiveMinimum": 0,
+          "description": "Intended on-screen duration before transition overlap is applied."
+        },
+        "sourceRef": {
+          "$ref": "#/$defs/sourceRef",
+          "description": "Required when kind is clip. Must be absent for gap."
+        },
+        "speed": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "default": 1.0
+        },
+        "reason": {
+          "type": "string",
+          "description": "Why the orchestrator chose this slot. Surfaced in the UI so the user can judge the cut, and carried into the feedback loop."
+        },
+        "score": { "$ref": "#/$defs/unitScore" }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "kind": { "const": "clip" } }, "required": ["kind"] },
+          "then": { "required": ["sourceRef"] }
+        },
+        {
+          "if": { "properties": { "kind": { "const": "gap" } }, "required": ["kind"] },
+          "then": { "not": { "required": ["sourceRef"] } }
+        }
+      ]
+    },
+    "sourceRef": {
+      "type": "object",
+      "description": "An in/out point in real footage. Every one of these is checked by the grounding gate against the footage graph before the DSL is emitted.",
+      "additionalProperties": false,
+      "required": ["sourceId", "inUs", "outUs"],
+      "properties": {
+        "sourceId": { "$ref": "#/$defs/id" },
+        "shotId": {
+          "$ref": "#/$defs/id",
+          "description": "The shot this range was taken from, when it came from one."
+        },
+        "inUs": { "$ref": "#/$defs/us" },
+        "outUs": { "$ref": "#/$defs/us" }
+      }
+    },
+    "anchor": {
+      "type": "object",
+      "description": "The only way anything in this document expresses a time position: relative to a slot. Never absolute.",
+      "additionalProperties": false,
+      "required": ["slotId"],
+      "properties": {
+        "slotId": { "$ref": "#/$defs/id" },
+        "offsetUs": {
+          "type": "integer",
+          "description": "Offset from the slot's own start. May be negative to lead into the slot.",
+          "default": 0
+        }
+      }
+    },
+    "tracks": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "video": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/videoItem" }
+        },
+        "text": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/textItem" }
+        },
+        "audio": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/audioItem" }
+        }
+      }
+    },
+    "videoItem": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["slotId"],
+      "properties": {
+        "slotId": { "$ref": "#/$defs/id" },
+        "crop": {
+          "type": "object",
+          "description": "Normalised crop rectangle, so it survives any resolution change.",
+          "additionalProperties": false,
+          "required": ["x", "y", "w", "h"],
+          "properties": {
+            "x": { "$ref": "#/$defs/unitScore" },
+            "y": { "$ref": "#/$defs/unitScore" },
+            "w": { "$ref": "#/$defs/unitScore" },
+            "h": { "$ref": "#/$defs/unitScore" }
+          }
+        },
+        "filters": {
+          "type": "array",
+          "description": "Adjustments to the picture. `eq` takes brightness (-1 to 1, 0 unchanged), contrast (0 to 2, 1 unchanged) and saturation (0 to 3, 1 unchanged), applied by the renderer itself rather than by ffmpeg's eq filter, which is GPL.",
+          "items": { "$ref": "#/$defs/filter" }
+        },
+        "background": {
+          "type": "object",
+          "description": "What fills the frame round a picture that does not cover it: black, a colour, or the picture itself enlarged and blurred. Absent is black.",
+          "additionalProperties": false,
+          "required": ["kind"],
+          "properties": {
+            "kind": { "enum": ["black", "color", "blur"] },
+            "color": {
+              "type": "string",
+              "pattern": "^#[0-9A-Fa-f]{6,8}$",
+              "description": "For kind color."
+            }
+          }
+        },
+        "transform": {
+          "type": "object",
+          "description": "Where the picture sits in the frame: how far it is enlarged, moved and turned, keyed at moments of the slot and eased in a straight line between them. A decision like any other in this document -- the editor applies it as the clip's own position, scale and rotation, and the user can reset it. Absent means the picture fitted to the frame, as the editor places it.",
+          "additionalProperties": false,
+          "required": ["keyframes"],
+          "properties": {
+            "keyframes": {
+              "type": "array",
+              "minItems": 1,
+              "description": "In order of offset. One keyframe holds for the whole slot.",
+              "items": { "$ref": "#/$defs/transformKeyframe" }
+            }
+          }
+        }
+      }
+    },
+    "transformKeyframe": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["offsetUs", "scale"],
+      "properties": {
+        "offsetUs": {
+          "$ref": "#/$defs/us",
+          "description": "From the slot's own start, on the finished piece's clock -- never an absolute timeline position. At most the slot's durationUs."
+        },
+        "scale": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "description": "1 is the picture fitted to the frame; 1.5 is half as large again."
+        },
+        "x": {
+          "type": "number",
+          "default": 0,
+          "description": "How far the picture's centre moves right of the frame's centre, as a share of the frame's width."
+        },
+        "y": {
+          "type": "number",
+          "default": 0,
+          "description": "How far the picture's centre moves below the frame's centre, as a share of the frame's height."
+        },
+        "rotationDeg": {
+          "type": "number",
+          "default": 0,
+          "description": "How far the picture turns about its centre, clockwise, in degrees."
+        }
+      }
+    },
+    "filter": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name"],
+      "properties": {
+        "name": {
+          "enum": ["eq", "unsharp", "vignette", "colorBalance", "lut"]
+        },
+        "params": {
+          "type": "object",
+          "additionalProperties": { "type": ["number", "string", "boolean"] }
+        }
+      }
+    },
+    "textItem": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "anchor", "durationUs", "content"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "anchor": { "$ref": "#/$defs/anchor" },
+        "durationUs": { "$ref": "#/$defs/us" },
+        "content": { "type": "string" },
+        "role": {
+          "enum": ["subtitle", "title", "lowerThird", "caption"],
+          "default": "subtitle"
+        },
+        "transcriptSegmentId": {
+          "$ref": "#/$defs/id",
+          "description": "Set when this text came from ASR, so a subtitle can be traced to the utterance it transcribes."
+        },
+        "style": { "$ref": "#/$defs/textStyle" }
+      }
+    },
+    "textStyle": {
+      "type": "object",
+      "description": "How a text item looks. Sizes are in points of a frame whose shorter side is 540 points, so a style reads the same at any resolution: 28 is a subtitle, 48 a title.",
+      "additionalProperties": false,
+      "properties": {
+        "fontFamily": { "type": "string" },
+        "fontSizePt": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "description": "Points of a frame whose shorter side is 540: 28 on a 1080p frame is 56 pixels."
+        },
+        "primaryColor": { "type": "string", "pattern": "^#[0-9A-Fa-f]{6,8}$" },
+        "outlineColor": { "type": "string", "pattern": "^#[0-9A-Fa-f]{6,8}$" },
+        "outlineWidth": {
+          "type": "number",
+          "minimum": 0,
+          "description": "In the same points as fontSizePt."
+        },
+        "alignment": {
+          "enum": ["topLeft", "topCenter", "topRight", "middleLeft", "middleCenter", "middleRight", "bottomLeft", "bottomCenter", "bottomRight"]
+        },
+        "marginVPct": { "$ref": "#/$defs/unitScore" },
+        "bold": { "type": "boolean" },
+        "backgroundColor": {
+          "type": "string",
+          "pattern": "^#[0-9A-Fa-f]{6,8}$",
+          "description": "A box behind the text."
+        },
+        "x": {
+          "$ref": "#/$defs/unitScore",
+          "description": "Where the centre of the text sits across the frame, 0 its left edge and 1 its right, once the user has placed it. With y it overrides the place alignment gives; alignment then only aligns the lines."
+        },
+        "y": {
+          "$ref": "#/$defs/unitScore",
+          "description": "Where the centre of the text sits down the frame, 0 its top and 1 its bottom, once the user has placed it."
+        }
+      }
+    },
+    "audioItem": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "anchor", "kind"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "anchor": { "$ref": "#/$defs/anchor" },
+        "kind": {
+          "enum": ["source", "bgm", "sfx"]
+        },
+        "durationUs": { "$ref": "#/$defs/us" },
+        "assetPath": {
+          "type": "string",
+          "description": "Required for bgm and sfx. For source audio the slot's own sourceRef supplies the media."
+        },
+        "assetInUs": {
+          "$ref": "#/$defs/us",
+          "description": "Where in the asset playback starts. A beat-synced cut starts its music on the first beat, so every cut after it lands on one."
+        },
+        "gainDb": { "type": "number", "default": 0 },
+        "muted": {
+          "type": "boolean",
+          "description": "Silent, with gainDb kept so that unmuting restores it. A clip whose source item is muted plays none of its own sound; a clip with no source item plays it at 0 dB."
+        },
+        "fadeInUs": { "$ref": "#/$defs/us" },
+        "fadeOutUs": { "$ref": "#/$defs/us" },
+        "ducking": {
+          "type": "object",
+          "description": "Sidechain ducking against speech.",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": { "type": "boolean" },
+            "targetGainDb": { "type": "number" },
+            "thresholdDb": { "type": "number" }
+          }
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": { "kind": { "enum": ["bgm", "sfx"] } },
+            "required": ["kind"]
+          },
+          "then": { "required": ["assetPath"] }
+        }
+      ]
+    },
+    "transition": {
+      "type": "object",
+      "description": "Joins two adjacent slots. Its duration is the overlap the renderer must subtract when deriving absolute time -- the exact quantity that caused the drift in dev doc SIX.",
+      "additionalProperties": false,
+      "required": ["fromSlotId", "toSlotId", "type", "durationUs"],
+      "properties": {
+        "fromSlotId": { "$ref": "#/$defs/id" },
+        "toSlotId": { "$ref": "#/$defs/id" },
+        "type": {
+          "enum": ["cut", "xfade", "fadeToBlack", "wipeLeft", "wipeRight", "dissolve"]
+        },
+        "durationUs": {
+          "$ref": "#/$defs/us",
+          "description": "Must be 0 when type is cut, and must not exceed half of either adjacent slot's durationUs. The grounding gate enforces both."
+        }
+      }
+    },
+    "groundingRecord": {
+      "type": "object",
+      "description": "One verified claim. The gate writes a record per slot it cleared; a slot with no passing record never reaches the renderer.",
+      "additionalProperties": false,
+      "required": ["slotId", "status"],
+      "properties": {
+        "slotId": { "$ref": "#/$defs/id" },
+        "status": {
+          "enum": ["verified", "rejected"]
+        },
+        "resolvedShotId": { "$ref": "#/$defs/id" },
+        "resolvedEntityIds": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/id" }
+        },
+        "rejectionReason": {
+          "type": "string",
+          "description": "Set when status is rejected. Rejections are recorded, not silently repaired."
+        }
+      }
+    },
+    "dslProvenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "orchestrator": { "type": "string" },
+        "inferenceAdapter": {
+          "type": "string",
+          "description": "Which InferenceAdapter decided this cut, e.g. MockInference or LlamaCpp."
+        },
+        "model": { "type": "string" },
+        "templateId": { "$ref": "#/$defs/id" },
+        "priorsApplied": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "paramsHash": {
+          "type": "string",
+          "pattern": "^blake3:[0-9a-f]{64}$"
+        },
+        "completedAt": { "type": "string", "format": "date-time" },
+        "editor": {
+          "type": "string",
+          "description": "Set once a person has changed the cut in the built-in editor: which editor, at which version. The fields above still say what made the cut it started from."
+        },
+        "editedAt": { "type": "string", "format": "date-time" },
+        "changeRatio": {
+          "$ref": "#/$defs/unitScore",
+          "description": "How much of the finished piece the person changed from the cut the orchestrator made, by footage time: 0 the cut as made, 1 none of it kept. The feedback loop's core signal (dev doc SV)."
+        }
+      }
+    }
+  }
+}

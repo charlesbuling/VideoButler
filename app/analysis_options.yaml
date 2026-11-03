@@ -1,0 +1,35 @@
+# Dart analysis for the app.
+#
+# CI runs `flutter analyze` as a gate, mirroring how the Rust side runs clippy
+# with warnings denied. The rules added below are the ones that catch real
+# defects in this codebase; style-only rules are left out so the gate stays
+# meaningful rather than noisy.
+include: package:flutter_lints/flutter.yaml
+
+analyzer:
+  errors:
+    # An unawaited future in the engine layer means a run silently does not
+    # happen. That is a defect, not a style note.
+    unawaited_futures: error
+  exclude:
+    - build/**
+    - android/**
+    - web/**
+    - macos/**
+    - ios/**
+    - windows/**
+    - linux/**
+
+linter:
+  rules:
+    # A BuildContext is invalid after an async gap, and using a stale one
+    # throws at runtime rather than being caught at compile time. Every engine
+    # call in this app is async, so this is the most likely bug here.
+    use_build_context_synchronously: true
+    unawaited_futures: true
+    avoid_empty_else: true
+    avoid_relative_lib_imports: true
+    cancel_subscriptions: true
+    close_sinks: true
+    sort_child_properties_last: true
+    unnecessary_parenthesis: true

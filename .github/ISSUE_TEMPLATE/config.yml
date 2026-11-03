@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security / 安全问题
+    url: https://github.com/charlesbuling/VideoButler/security/policy
+    about: 不要开公开 issue。请发邮件到 217010072@link.cuhk.edu.cn（SECURITY.md）。

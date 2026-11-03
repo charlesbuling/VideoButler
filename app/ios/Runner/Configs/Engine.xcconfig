@@ -1,0 +1,37 @@
+// Link the Rust engine into the iOS app, as macos/Runner/Configs/Engine.xcconfig
+// does for the Mac; the three flags and their reasons are the same:
+//
+//   -force_load      nothing in Swift references the engine, so without it
+//                    the linker takes nothing from the archive;
+//   -u _vb_*         release builds dead-strip what nothing references;
+//   -export_dynamic  Dart finds the engine in the running process
+//                    (DynamicLibrary.process), which needs its symbols
+//                    exported from the executable.
+//
+// One archive per SDK: the device and the simulator are different
+// platforms to the linker even on the same arm64. Build them with
+// scripts/build-ios.sh.
+VB_ENGINE_LIB[sdk=iphoneos*] = $(SRCROOT)/../../core/target/aarch64-apple-ios/release/libvb_ffi.a
+VB_ENGINE_LIB[sdk=iphonesimulator*] = $(SRCROOT)/../../core/target/aarch64-apple-ios-sim/release/libvb_ffi.a
+VB_ENGINE_ROOTS = -u _vb_version -u _vb_doctor -u _vb_templates -u _vb_browse -u _vb_run -u _vb_call -u _vb_free_string
+
+// What the engine's own native code needs, as on the Mac: whisper.cpp's C++
+// and the GPU and vector frameworks it runs on, and Vision and Core Image
+// for vb-apple. A static library carries none of it.
+VB_NATIVE_LIBS = -lc++ -framework Accelerate -framework Foundation -framework Metal -framework MetalKit -framework Vision -framework CoreImage
+
+// The LGPL ffmpeg, as frameworks: linked dynamically, so a user can replace
+// it, which is what makes LGPL code shippable in a closed app. Built by
+// scripts/build-ffmpeg-ios.sh; the "Embed engine libraries" build phase
+// copies the right slice into the app and signs it.
+VB_LIBAV_XCFRAMEWORKS = $(SRCROOT)/../../build/ffmpeg-ios/current/xcframeworks
+VB_LIBAV_SLICE[sdk=iphoneos*] = ios-arm64
+VB_LIBAV_SLICE[sdk=iphonesimulator*] = ios-arm64-simulator
+VB_LIBAV_LIBS = -F$(VB_LIBAV_XCFRAMEWORKS)/libavfilter.xcframework/$(VB_LIBAV_SLICE) -F$(VB_LIBAV_XCFRAMEWORKS)/libavformat.xcframework/$(VB_LIBAV_SLICE) -F$(VB_LIBAV_XCFRAMEWORKS)/libavcodec.xcframework/$(VB_LIBAV_SLICE) -F$(VB_LIBAV_XCFRAMEWORKS)/libswscale.xcframework/$(VB_LIBAV_SLICE) -F$(VB_LIBAV_XCFRAMEWORKS)/libswresample.xcframework/$(VB_LIBAV_SLICE) -F$(VB_LIBAV_XCFRAMEWORKS)/libavutil.xcframework/$(VB_LIBAV_SLICE) -framework libavfilter -framework libavformat -framework libavcodec -framework libswscale -framework libswresample -framework libavutil
+
+OTHER_LDFLAGS = $(inherited) -force_load $(VB_ENGINE_LIB) $(VB_ENGINE_ROOTS) $(VB_LIBAV_LIBS) $(VB_NATIVE_LIBS) -Wl,-export_dynamic -liconv
+
+// The engine is built for arm64 only: every iPhone since the 5s, and the
+// simulator on Apple Silicon.
+ARCHS = arm64
+EXCLUDED_ARCHS[sdk=iphonesimulator*] = x86_64

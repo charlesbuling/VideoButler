@@ -1,0 +1,31 @@
+[package]
+name = "vb-ffi"
+description = "The C ABI the Flutter shell binds to. One thin boundary over the same core the CLI drives."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+
+[lib]
+name = "vb_ffi"
+# staticlib for iOS, where dynamic libraries are restricted; cdylib for the
+# desktop targets; rlib so the rest of the workspace can test it.
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[dependencies]
+vb-contracts.workspace = true
+vb-media.workspace = true
+vb-infer.workspace = true
+vb-pipeline.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+tracing.workspace = true
+
+[features]
+# Analyse video with linked libav instead of the ffmpeg CLI. Mobile builds
+# need it, since they cannot spawn a process. See vb-media.
+libav = ["vb-pipeline/libav"]
+# Transcribe speech with a downloaded whisper.cpp model. The desktop app turns
+# it on; see scripts/build-macos-native.sh for what it adds to the link.
+whisper = ["vb-pipeline/whisper"]

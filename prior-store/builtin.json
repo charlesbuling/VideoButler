@@ -1,0 +1,328 @@
+[
+  {
+    "id": "rhythm.upbeat-montage",
+    "name": "Upbeat montage",
+    "kind": "rhythm",
+    "tags": ["fast", "music-led"],
+    "params": {
+      "targetDurationUs": 30000000,
+      "minSlotUs": 1200000,
+      "maxSlotUs": 3500000,
+      "transition": "cut",
+      "transitionDurationUs": 0,
+      "beatAlign": true,
+      "titleCard": true,
+      "titleCardDurationUs": 1500000,
+      "subtitles": false
+    }
+  },
+  {
+    "id": "rhythm.calm-observational",
+    "name": "Calm observational",
+    "kind": "rhythm",
+    "tags": ["calm", "slow"],
+    "params": {
+      "targetDurationUs": 45000000,
+      "minSlotUs": 3000000,
+      "maxSlotUs": 8000000,
+      "transition": "xfade",
+      "transitionDurationUs": 600000,
+      "beatAlign": false,
+      "titleCard": true,
+      "titleCardDurationUs": 2500000,
+      "subtitles": false
+    }
+  },
+  {
+    "id": "rhythm.dialogue-led",
+    "name": "Dialogue led",
+    "kind": "rhythm",
+    "tags": ["dialogue", "speech"],
+    "params": {
+      "targetDurationUs": 60000000,
+      "minSlotUs": 2000000,
+      "maxSlotUs": 12000000,
+      "transition": "cut",
+      "transitionDurationUs": 0,
+      "beatAlign": false,
+      "titleCard": false,
+      "titleCardDurationUs": 2000000,
+      "subtitles": true,
+      "extra": { "speechSubtitles": true }
+    }
+  },
+  {
+    "id": "emotion.warm-nostalgic",
+    "name": "Warm nostalgic",
+    "kind": "emotion",
+    "tags": ["warm", "soft"],
+    "params": {
+      "targetDurationUs": 40000000,
+      "minSlotUs": 2500000,
+      "maxSlotUs": 6000000,
+      "transition": "dissolve",
+      "transitionDurationUs": 800000,
+      "beatAlign": false,
+      "titleCard": true,
+      "titleCardDurationUs": 2000000,
+      "subtitles": false,
+      "extra": {
+        "eqSaturation": 1.15,
+        "eqContrast": 0.95
+      }
+    }
+  },
+  {
+    "id": "emotion.cool-clinical",
+    "name": "Cool clinical",
+    "kind": "emotion",
+    "tags": ["cool", "neutral"],
+    "params": {
+      "targetDurationUs": 35000000,
+      "minSlotUs": 2000000,
+      "maxSlotUs": 5000000,
+      "transition": "cut",
+      "transitionDurationUs": 0,
+      "beatAlign": false,
+      "titleCard": false,
+      "titleCardDurationUs": 2000000,
+      "subtitles": true,
+      "extra": {
+        "eqSaturation": 0.9,
+        "eqContrast": 1.08
+      }
+    }
+  },
+  {
+    "id": "emotion.dramatic-high-contrast",
+    "name": "Dramatic high contrast",
+    "kind": "emotion",
+    "tags": ["dramatic", "bold"],
+    "params": {
+      "targetDurationUs": 30000000,
+      "minSlotUs": 1500000,
+      "maxSlotUs": 4500000,
+      "transition": "fadeToBlack",
+      "transitionDurationUs": 500000,
+      "beatAlign": true,
+      "titleCard": true,
+      "titleCardDurationUs": 2000000,
+      "subtitles": false,
+      "extra": {
+        "eqSaturation": 1.05,
+        "eqContrast": 1.2
+      }
+    }
+  },
+  {
+    "id": "content.travel-diary",
+    "name": "Travel diary",
+    "kind": "content",
+    "tags": ["travel", "exterior"],
+    "params": {
+      "targetDurationUs": 50000000,
+      "minSlotUs": 2000000,
+      "maxSlotUs": 6000000,
+      "transition": "cut",
+      "transitionDurationUs": 0,
+      "beatAlign": true,
+      "titleCard": true,
+      "titleCardDurationUs": 2000000,
+      "subtitles": true
+    }
+  },
+  {
+    "id": "content.interview-cutdown",
+    "name": "Interview cutdown",
+    "kind": "content",
+    "tags": ["interview", "speech"],
+    "params": {
+      "targetDurationUs": 90000000,
+      "minSlotUs": 3000000,
+      "maxSlotUs": 15000000,
+      "transition": "cut",
+      "transitionDurationUs": 0,
+      "beatAlign": false,
+      "titleCard": true,
+      "titleCardDurationUs": 2500000,
+      "subtitles": true,
+      "extra": { "speechSubtitles": true }
+    }
+  },
+  {
+    "id": "content.product-showcase",
+    "name": "Product showcase",
+    "kind": "content",
+    "tags": ["product", "studio"],
+    "params": {
+      "targetDurationUs": 25000000,
+      "minSlotUs": 1200000,
+      "maxSlotUs": 4000000,
+      "transition": "cut",
+      "transitionDurationUs": 0,
+      "beatAlign": true,
+      "titleCard": true,
+      "titleCardDurationUs": 1500000,
+      "subtitles": true
+    }
+    },
+  {
+    "id": "emotion.happy-bright",
+    "name": "Happy and bright",
+    "kind": "emotion",
+    "tags": ["happy", "bright"],
+    "params": {
+      "targetDurationUs": 30000000,
+      "minSlotUs": 1200000,
+      "maxSlotUs": 3000000,
+      "transition": "cut",
+      "transitionDurationUs": 0,
+      "beatAlign": true,
+      "titleCard": true,
+      "titleCardDurationUs": 1500000,
+      "subtitles": false,
+      "extra": {
+        "eqSaturation": 1.12,
+        "fixedBpm": 120
+      }
+    }
+  },
+  {
+    "id": "emotion.sad-tender",
+    "name": "Sad and tender",
+    "kind": "emotion",
+    "tags": ["sad", "slow"],
+    "params": {
+      "targetDurationUs": 45000000,
+      "minSlotUs": 3000000,
+      "maxSlotUs": 7000000,
+      "transition": "dissolve",
+      "transitionDurationUs": 800000,
+      "beatAlign": false,
+      "titleCard": true,
+      "titleCardDurationUs": 2500000,
+      "subtitles": true,
+      "extra": {
+        "eqSaturation": 0.85,
+        "fixedBpm": 72
+      }
+    }
+  },
+  {
+    "id": "emotion.humor-snappy",
+    "name": "Humorous and snappy",
+    "kind": "emotion",
+    "tags": ["humor", "snappy"],
+    "params": {
+      "targetDurationUs": 25000000,
+      "minSlotUs": 800000,
+      "maxSlotUs": 2500000,
+      "transition": "cut",
+      "transitionDurationUs": 0,
+      "beatAlign": true,
+      "titleCard": true,
+      "titleCardDurationUs": 1200000,
+      "subtitles": true,
+      "extra": {
+        "fixedBpm": 128
+      }
+    }
+  },
+  {
+    "id": "content.dance-beat",
+    "name": "Dance on the beat",
+    "kind": "content",
+    "tags": ["dance", "music-led"],
+    "params": {
+      "targetDurationUs": 30000000,
+      "minSlotUs": 1000000,
+      "maxSlotUs": 4000000,
+      "transition": "cut",
+      "transitionDurationUs": 0,
+      "beatAlign": true,
+      "titleCard": false,
+      "titleCardDurationUs": 1500000,
+      "subtitles": false,
+      "extra": {
+        "preferMotion": true,
+        "dance": true
+      }
+    }
+  },
+  {
+    "id": "content.subject-continuity",
+    "name": "Subject continuity",
+    "kind": "content",
+    "tags": ["continuity", "music-led"],
+    "params": {
+      "targetDurationUs": 30000000,
+      "minSlotUs": 1000000,
+      "maxSlotUs": 4000000,
+      "transition": "cut",
+      "transitionDurationUs": 0,
+      "beatAlign": true,
+      "titleCard": false,
+      "titleCardDurationUs": 1500000,
+      "subtitles": false,
+      "extra": {
+        "preferMotion": true,
+        "continuity": true
+      }
+    }
+  },
+  {
+    "id": "content.growth-story",
+    "name": "Growth story",
+    "kind": "content",
+    "tags": ["growth", "chronological"],
+    "params": {
+      "targetDurationUs": 60000000,
+      "minSlotUs": 2000000,
+      "maxSlotUs": 5000000,
+      "transition": "dissolve",
+      "transitionDurationUs": 600000,
+      "beatAlign": false,
+      "titleCard": true,
+      "titleCardDurationUs": 2500000,
+      "subtitles": true
+    }
+  },
+  {
+    "id": "content.annual-review",
+    "name": "A year in review",
+    "kind": "content",
+    "tags": ["annual", "chronological"],
+    "params": {
+      "targetDurationUs": 90000000,
+      "minSlotUs": 2000000,
+      "maxSlotUs": 4500000,
+      "transition": "dissolve",
+      "transitionDurationUs": 500000,
+      "beatAlign": false,
+      "titleCard": true,
+      "titleCardDurationUs": 2500000,
+      "subtitles": true,
+      "extra": {
+        "order": "sections",
+        "sections": ["people", "scenery", "food", "other"]
+      }
+    }
+  },
+  {
+    "id": "content.together-story",
+    "name": "Together over time",
+    "kind": "content",
+    "tags": ["together", "chronological"],
+    "params": {
+      "targetDurationUs": 60000000,
+      "minSlotUs": 2000000,
+      "maxSlotUs": 5000000,
+      "transition": "dissolve",
+      "transitionDurationUs": 600000,
+      "beatAlign": false,
+      "titleCard": true,
+      "titleCardDurationUs": 2500000,
+      "subtitles": true
+    }
+  }
+]

@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- App Sandbox is off, deliberately.
+
+	     The app browses the user's filesystem through the engine rather than
+	     through a system panel, so that one picker works on every platform,
+	     including the web build that cannot see files at all. Inside the
+	     sandbox that design cannot work: HOME is redirected into the app's
+	     container, so the picker opens on an empty directory, and reading a
+	     video the user points at is denied.
+
+	     This is allowed for Developer ID distribution, which is how a local
+	     tool like this ships. The Mac App Store requires the sandbox, so
+	     going there later means a native open panel and security-scoped
+	     bookmarks -- a real piece of work, not a checkbox. -->
+	<key>com.apple.security.app-sandbox</key>
+	<false/>
+</dict>
+</plist>

@@ -1,0 +1,9 @@
+#include "../../Flutter/Flutter-Debug.xcconfig"
+#include "Warnings.xcconfig"
+#include "Engine.xcconfig"
+
+// A debug build runs from the build folder, and the release script's step
+// that copies the LGPL ffmpeg into the bundle does not run for it. Point the
+// runtime linker at that ffmpeg's own folder instead. Debug only: a release
+// must not carry a path from the machine it was built on.
+LD_RUNPATH_SEARCH_PATHS = $(inherited) @executable_path/../Frameworks $(VB_LIBAV_DIR)/lib

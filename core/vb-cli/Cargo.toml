@@ -1,0 +1,38 @@
+[package]
+name = "vb-cli"
+description = "The headless entry point. The Flutter app is a second consumer of the same core, never its owner."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+
+[lib]
+name = "vb_cli"
+path = "src/lib.rs"
+
+[[bin]]
+name = "vb"
+path = "src/main.rs"
+
+[dependencies]
+vb-contracts.workspace = true
+vb-media.workspace = true
+vb-infer.workspace = true
+vb-narrative.workspace = true
+vb-pipeline.workspace = true
+vb-render.workspace = true
+vb-export.workspace = true
+clap.workspace = true
+anyhow.workspace = true
+serde_json.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+tiny_http.workspace = true
+
+[features]
+# Analyse video with linked libav instead of the ffmpeg CLI. Mobile builds
+# need it, since they cannot spawn a process. See vb-media.
+libav = ["vb-pipeline/libav"]
+# Transcribe speech with a downloaded whisper.cpp model. See vb-whisper.
+whisper = ["vb-pipeline/whisper"]

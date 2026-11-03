@@ -1,0 +1,23 @@
+[package]
+name = "vb-whisper"
+description = "Speech recognition with whisper.cpp, behind AsrAdapter, using a model from the shared library."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+
+[dependencies]
+vb-contracts.workspace = true
+vb-infer.workspace = true
+vb-media.workspace = true
+tracing.workspace = true
+# Traditional to simplified Chinese, from OpenCC's dictionaries. MIT, with
+# the dictionaries under Apache-2.0.
+fast2s = "0.3"
+
+[target.'cfg(target_vendor = "apple")'.dependencies]
+whisper-rs = { version = "0.16", features = ["metal"] }
+
+[target.'cfg(not(target_vendor = "apple"))'.dependencies]
+whisper-rs = "0.16"

@@ -1,0 +1,25 @@
+[package]
+name = "vb-onnx"
+description = "The model host's ONNX Runtime engine: vision models (depth first) behind the vb-infer traits."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+
+[dependencies]
+vb-infer.workspace = true
+vb-contracts.workspace = true
+tracing.workspace = true
+# ONNX Runtime (MIT), loaded at runtime from a library the app carries --
+# scripts/build-onnxruntime-macos.sh builds it. Default features are off because
+# `download-binaries` fetches ONNX Runtime through ureq at build time, and
+# deny.toml allows an HTTP client only in vb-cloud. Pinned exactly: 2.0 is
+# still a release candidate and its API moves between candidates.
+ort = { version = "=2.0.0-rc.13", default-features = false, features = ["std", "load-dynamic", "coreml", "api-24"] }
+# Decodes the keyframe stills the scene labeller reads. Pure Rust, no C, so it
+# builds for every target the engine does.
+zune-jpeg = "0.5"
+# Writes the face pictures the album shows (faceid.rs). MIT OR Apache-2.0,
+# as vb-pipeline already uses it.
+png = "0.18"

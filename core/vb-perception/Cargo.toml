@@ -1,0 +1,22 @@
+[package]
+name = "vb-perception"
+description = "The perception pipeline: shot detection, adaptive keyframes, classical CV scoring, ASR and description. Writes the Footage Graph and nothing else."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+
+[dependencies]
+vb-contracts.workspace = true
+vb-media.workspace = true
+vb-infer.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+serde.workspace = true
+
+# The probes in tests/ run real models over real footage; the library itself
+# reaches models only through the vb-infer traits.
+[dev-dependencies]
+vb-onnx.workspace = true
+serde_json.workspace = true

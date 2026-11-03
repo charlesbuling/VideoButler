@@ -1,0 +1,375 @@
+{
+  "schemaVersion": "footage-graph/0.1",
+  "generatedAt": "2026-09-19T12:00:00Z",
+  "projectId": "demo-hike",
+  "sources": [
+    {
+      "id": "src-01",
+      "path": "/Users/me/Movies/hike.mp4",
+      "contentHash": "blake3:a1b2c3d4a1b2c3d4a1b2c3d4a1b2c3d4a1b2c3d4a1b2c3d4a1b2c3d4a1b2c3d4",
+      "mediaKind": "video",
+      "durationUs": 62000000,
+      "fpsNum": 30000,
+      "fpsDen": 1001,
+      "width": 3840,
+      "height": 2160,
+      "videoCodec": "h264",
+      "audioCodec": "aac",
+      "hasAudio": true,
+      "createdAt": "2026-09-01T09:15:00Z",
+      "rotation": 0,
+      "categories": ["people", "scenery"]
+    },
+    {
+      "id": "src-02",
+      "path": "/Users/me/Pictures/summit.heic",
+      "contentHash": "blake3:e5f6a7b8e5f6a7b8e5f6a7b8e5f6a7b8e5f6a7b8e5f6a7b8e5f6a7b8e5f6a7b8",
+      "mediaKind": "image",
+      "durationUs": 10000000,
+      "width": 4032,
+      "height": 3024,
+      "videoCodec": "hevc",
+      "hasAudio": false,
+      "createdAt": "2026-09-01T17:31:02+08:00",
+      "rotation": 90
+    }
+  ],
+  "shots": [
+    {
+      "id": "shot-01",
+      "sourceId": "src-01",
+      "startUs": 0,
+      "endUs": 12000000,
+      "shotChangeConfidence": 0.94,
+      "keyframes": [
+        {
+          "id": "kf-01-a",
+          "atUs": 2000000,
+          "path": "keyframes/shot-01-a.jpg",
+          "scores": {
+            "sharpness": 0.82,
+            "flowJitter": 0.14,
+            "faceQuality": 0.71,
+            "composition": 0.64,
+            "exposure": 0.78,
+            "aggregate": 0.76
+          }
+        },
+        {
+          "id": "kf-01-b",
+          "atUs": 8000000,
+          "path": "keyframes/shot-01-b.jpg",
+          "scores": {
+            "sharpness": 0.61,
+            "flowJitter": 0.38,
+            "composition": 0.55
+          }
+        }
+      ],
+      "description": {
+        "text": "A wide establishing shot of a forest trail at morning, one hiker entering frame from the left.",
+        "model": "qwen2.5-vl-7b",
+        "confidence": 0.81
+      },
+      "entityRefs": ["ent-hiker-1"],
+      "actions": [
+        {
+          "verb": "walk",
+          "actorEntityId": "ent-hiker-1",
+          "startUs": 3000000,
+          "endUs": 11000000,
+          "confidence": 0.77
+        }
+      ],
+      "audio": {
+        "loudnessLufs": -23.4,
+        "hasSpeech": false,
+        "musicEnergy": 0.12,
+        "silenceRatio": 0.44
+      },
+      "tags": ["establishing", "exterior"]
+    },
+    {
+      "id": "shot-02",
+      "sourceId": "src-01",
+      "startUs": 12000000,
+      "endUs": 28500000,
+      "shotChangeConfidence": 0.88,
+      "keyframes": [
+        {
+          "id": "kf-02-a",
+          "atUs": 15500000,
+          "path": "keyframes/shot-02-a.jpg",
+          "scores": {
+            "sharpness": 0.91,
+            "flowJitter": 0.08,
+            "faceQuality": 0.88,
+            "composition": 0.79,
+            "exposure": 0.72,
+            "aggregate": 0.86
+          }
+        }
+      ],
+      "description": {
+        "text": "Medium close-up of the hiker pausing to drink from a bottle, speaking to camera.",
+        "model": "qwen2.5-vl-7b",
+        "confidence": 0.86
+      },
+      "entityRefs": ["ent-hiker-1", "ent-bottle-1"],
+      "actions": [
+        {
+          "verb": "drink",
+          "actorEntityId": "ent-hiker-1",
+          "targetEntityId": "ent-bottle-1",
+          "startUs": 16000000,
+          "endUs": 19500000,
+          "confidence": 0.83
+        }
+      ],
+      "audio": {
+        "loudnessLufs": -16.1,
+        "hasSpeech": true,
+        "musicEnergy": 0.05,
+        "silenceRatio": 0.11
+      },
+      "tags": ["dialogue"]
+    },
+    {
+      "id": "shot-03",
+      "sourceId": "src-01",
+      "startUs": 28500000,
+      "endUs": 62000000,
+      "shotChangeConfidence": 0.71,
+      "keyframes": [
+        {
+          "id": "kf-03-a",
+          "atUs": 40000000,
+          "path": "keyframes/shot-03-a.jpg",
+          "scores": {
+            "sharpness": 0.55,
+            "flowJitter": 0.52,
+            "composition": 0.83,
+            "exposure": 0.69
+          }
+        }
+      ],
+      "entityRefs": ["ent-hiker-1"],
+      "audio": {
+        "loudnessLufs": -25.8,
+        "hasSpeech": false,
+        "musicEnergy": 0.21,
+        "silenceRatio": 0.63
+      },
+      "tags": ["landscape"],
+      "segments": [
+        {
+          "id": "shot-03-seg-0",
+          "startUs": 28500000,
+          "endUs": 36000000,
+          "usableStartUs": 29500000,
+          "usableEndUs": 35500000,
+          "sceneId": "scene-trail",
+          "quality": 0.61,
+          "camera": "steady",
+          "signature": [0.42, 0.51, 0.47, 0.38],
+          "caption": { "text": "孩子在超市里挑选水果", "model": "Qwen3-VL-8B" },
+          "people": 1,
+          "poses": [
+            {
+              "atUs": 29500000,
+              "people": [
+                {
+                  "box": [0.31, 0.12, 0.62, 0.97],
+                  "score": 0.91,
+                  "keypoints": [
+                    [0.47, 0.2, 0.93],
+                    [0.47, 0.2, 0.93],
+                    [0.47, 0.2, 0.93],
+                    [0.47, 0.2, 0.93],
+                    [0.47, 0.2, 0.93],
+                    [0.47, 0.2, 0.93],
+                    [0.47, 0.2, 0.93],
+                    [0.47, 0.2, 0.93],
+                    [0.47, 0.2, 0.93],
+                    [0.47, 0.2, 0.93],
+                    [0.47, 0.2, 0.93],
+                    [0.47, 0.2, 0.93],
+                    [0.47, 0.2, 0.93],
+                    [0.47, 0.2, 0.93],
+                    [0.47, 0.2, 0.93],
+                    [0.47, 0.2, 0.93],
+                    [0.47, 0.2, 0.93]
+                  ]
+                }
+              ]
+            }
+          ],
+          "rhythm": {
+            "bpm": 112.0,
+            "confidence": 0.64,
+            "beatsUs": [29790000, 30325000, 30860000, 31395000],
+            "idle": [{ "startUs": 33100000, "endUs": 34200000 }],
+            "watching": [{ "startUs": 31600000, "endUs": 33100000 }],
+            "unrhythmic": [{ "startUs": 34200000, "endUs": 35500000 }]
+          }
+        },
+        {
+          "id": "shot-03-seg-1",
+          "startUs": 36000000,
+          "endUs": 62000000,
+          "usableStartUs": 37000000,
+          "usableEndUs": 61500000,
+          "sceneId": "scene-summit",
+          "quality": 0.74,
+          "camera": "still",
+          "keyframeId": "kf-03-a",
+          "description": {
+            "text": "A wide valley under low cloud, seen from the summit.",
+            "model": "qwen-vl"
+          },
+          "signature": [0.63, 0.49, 0.55, 0.71],
+          "occlusion": 0.12,
+          "composition": 0.61
+        }
+      ],
+      "timeline": [
+        { "atUs": 28500000, "quality": 0.22, "motion": 0.35, "camera": 0.61 },
+        { "atUs": 29000000, "quality": 0.48, "motion": 0.12, "camera": 0.18 },
+        { "atUs": 29500000, "quality": 0.63, "motion": 0.05, "camera": 0.04 }
+      ]
+    },
+    {
+      "id": "shot-04",
+      "sourceId": "src-02",
+      "startUs": 0,
+      "endUs": 10000000,
+      "keyframes": [
+        {
+          "id": "kf-04-a",
+          "atUs": 0,
+          "path": "keyframes/shot-04-a.jpg",
+          "scores": { "sharpness": 0.81, "flowJitter": 0.0, "composition": 0.64, "exposure": 0.77, "aggregate": 0.74 }
+        }
+      ],
+      "segments": [
+        {
+          "id": "shot-04-seg-0",
+          "startUs": 0,
+          "endUs": 10000000,
+          "usableStartUs": 0,
+          "usableEndUs": 10000000,
+          "sceneId": "scene-summit",
+          "quality": 0.74,
+          "camera": "still",
+          "keyframeId": "kf-04-a",
+          "signature": [0.4, 0.58, 0.61, 0.33]
+        }
+      ],
+      "timeline": [{ "atUs": 0, "quality": 0.74, "motion": 0.0, "camera": 0.0 }]
+    }
+  ],
+  "entities": [
+    {
+      "id": "ent-hiker-1",
+      "kind": "person",
+      "label": "hiker in red jacket",
+      "firstSeenUs": 3000000,
+      "lastSeenUs": 58000000,
+      "shotIds": ["shot-01", "shot-02", "shot-03"],
+      "confidence": 0.9,
+      "tracker": "sam2",
+      "thumbnailPath": "faces/shot-01-kf-0-face-0.jpg",
+      "signature": [0.12, -0.03, 0.44, 0.08, -0.21, 0.35]
+    },
+    {
+      "id": "ent-bottle-1",
+      "kind": "object",
+      "label": "water bottle",
+      "firstSeenUs": 16000000,
+      "lastSeenUs": 19500000,
+      "shotIds": ["shot-02"],
+      "confidence": 0.74,
+      "tracker": "sam2"
+    }
+  ],
+  "transcript": [
+    {
+      "id": "tr-01",
+      "sourceId": "src-01",
+      "startUs": 16200000,
+      "endUs": 19100000,
+      "text": "Okay, that is about halfway up.",
+      "speaker": "SPEAKER_00",
+      "language": "en",
+      "confidence": 0.93
+    }
+  ],
+  "scenes": [
+    {
+      "id": "scene-trail",
+      "label": "trail, forest",
+      "segmentIds": ["shot-03-seg-0"]
+    },
+    {
+      "id": "scene-summit",
+      "label": "valley, cloud",
+      "segmentIds": ["shot-03-seg-1", "shot-04-seg-0"]
+    }
+  ],
+  "priors": {
+    "shotLength": {
+      "meanUs": 20666666,
+      "medianUs": 16500000,
+      "p10Us": 12000000,
+      "p90Us": 33500000
+    },
+    "beatGrid": {
+      "bpm": 118.0,
+      "firstBeatUs": 240000,
+      "confidence": 0.62,
+      "origin": "music",
+      "assetPath": "/Users/me/Music/upbeat-01.m4a",
+      "assetDurationUs": 184000000
+    },
+    "transitionFrequency": {
+      "cut": 0.82,
+      "xfade": 0.18
+    }
+  },
+  "provenance": [
+    {
+      "stage": "probe",
+      "tool": "ffprobe",
+      "toolVersion": "9.0.1",
+      "adapter": "FfmpegCli",
+      "paramsHash": "blake3:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+      "completedAt": "2026-09-19T12:00:01Z",
+      "durationMs": 140
+    },
+    {
+      "stage": "shotDetect",
+      "tool": "ffmpeg",
+      "toolVersion": "9.0.1",
+      "adapter": "FfmpegCli",
+      "paramsHash": "blake3:fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210",
+      "completedAt": "2026-09-19T12:00:09Z",
+      "durationMs": 8120
+    },
+    {
+      "stage": "director",
+      "adapter": "DepthAnythingV2Small+YuNet+PPHumanSeg",
+      "paramsHash": "blake3:0f1e2d3c4b5a69780f1e2d3c4b5a69780f1e2d3c4b5a69780f1e2d3c4b5a6978",
+      "completedAt": "2026-09-19T12:00:30Z",
+      "durationMs": 20400
+    },
+    {
+      "stage": "asr",
+      "tool": "whisper.cpp",
+      "toolVersion": "ggml-small",
+      "adapter": "WhisperCpp",
+      "paramsHash": "blake3:9f8e7d6c9f8e7d6c9f8e7d6c9f8e7d6c9f8e7d6c9f8e7d6c9f8e7d6c9f8e7d6c",
+      "completedAt": "2026-09-19T12:00:41Z",
+      "durationMs": 31800
+    }
+  ]
+}

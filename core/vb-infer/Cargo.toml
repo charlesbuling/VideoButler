@@ -1,0 +1,18 @@
+[package]
+name = "vb-infer"
+description = "Adapter seams for every model the pipeline calls: LLM, VLM, ASR and tracking. The engine choice (llama.cpp, MLC LLM, cloud) is an implementation detail behind these traits, never a product decision."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+
+# Depends on vb-contracts only. The narrative layer is allowed to depend on
+# this crate, so anything added here becomes reachable from narrative code --
+# keep it to model interfaces and their data types.
+[dependencies]
+vb-contracts.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+tracing.workspace = true

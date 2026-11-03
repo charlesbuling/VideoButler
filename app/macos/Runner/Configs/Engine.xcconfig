@@ -1,0 +1,61 @@
+// Link the Rust engine into the app binary.
+//
+// vb-ffi builds as a static library, and this is what pulls it into the
+// Runner target. It lives in an xcconfig rather than in the Xcode project so
+// the setting is reviewable as text and survives a Flutter template update.
+//
+// Three flags, each load-bearing, each learned the hard way:
+//
+//   -force_load    No Swift or Objective-C code references the engine, so
+//                  without it the linker takes nothing from the archive and
+//                  the app builds clean with no engine in it.
+//   -u _vb_*       Release builds dead-strip. Once loaded, the engine's code
+//                  is still unreferenced, so it is stripped again unless each
+//                  entry point is named as a root. One -u per C ABI function;
+//                  add a line here when vb-ffi gains one.
+//   -export_dynamic  The Dart side looks the engine up in the running process
+//                  (DynamicLibrary.process), which needs these symbols in the
+//                  executable's export table, not merely present in it.
+//
+// -liconv is what `rustc --print native-static-libs` asks for on macOS; the
+// rest (libc, libm, libSystem) the app already links.
+//
+// Always the release engine, whatever configuration the app is built in: a
+// debug build of the engine is an order of magnitude slower, and the engine
+// is a dependency here, not the thing under development. Build it with
+// scripts/build-macos-native.sh, or `cargo build --release -p vb-ffi`.
+VB_ENGINE_LIB = $(SRCROOT)/../../core/target/release/libvb_ffi.a
+// vb_call reaches every operation added since the first five, so this list
+// stops growing with each feature: new operations are names inside vb_call.
+VB_ENGINE_ROOTS = -u _vb_version -u _vb_doctor -u _vb_templates -u _vb_browse -u _vb_run -u _vb_call -u _vb_free_string
+
+// What the engine's own native code needs, as `rustc --print
+// native-static-libs` reports it for `--features libav,whisper`:
+//
+//   whisper.cpp   C++ (libc++), and Metal, MetalKit and Accelerate, which it
+//                 runs speech recognition on.
+//   vb-apple      Vision and Core Image: scene labels, faces, face crops.
+//
+// A static library carries none of this, so the app names it again; leave
+// one out and the link fails with an undefined symbol, which at least is loud.
+VB_NATIVE_LIBS = -lc++ -framework Accelerate -framework Foundation -framework Metal -framework MetalKit -framework Vision -framework CoreImage
+
+// The LGPL ffmpeg the engine calls, built by scripts/build-ffmpeg-macos.sh.
+// The app carries these libraries inside its own bundle, so it analyses video
+// on a Mac that has never installed ffmpeg. `current` is a symlink that
+// script maintains, which keeps the ffmpeg version in the script alone.
+//
+// The engine's own build.rs emits these same flags when cargo links a binary,
+// but a static library carries no link dependencies, so the app has to name
+// them again here. Dependents first, as static linking requires.
+VB_LIBAV_DIR = $(SRCROOT)/../../build/ffmpeg-macos/current
+VB_LIBAV_LIBS = -L$(VB_LIBAV_DIR)/lib -lavfilter -lavformat -lavcodec -lswscale -lswresample -lavutil
+
+OTHER_LDFLAGS = $(inherited) -force_load $(VB_ENGINE_LIB) $(VB_ENGINE_ROOTS) $(VB_LIBAV_LIBS) $(VB_NATIVE_LIBS) -Wl,-export_dynamic -liconv
+
+// Apple Silicon only, because the engine is built for the host and cargo has
+// no x86_64-apple-darwin target installed here. A universal app needs that
+// target added, both slices built, and `lipo -create` over the two archives;
+// then this line goes away. Flutter is heading the same way: its
+// `--enable-macos-arm64-only` becomes the default in a future release.
+ARCHS = arm64

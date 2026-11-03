@@ -1,0 +1,18 @@
+[package]
+name = "vb-render"
+description = "The finished piece rendered from the Editing DSL: every frame composed in Rust -- placement, adjustments, transitions, text -- and the sound mixed, then encoded through the media backend. The renderer derives absolute time from resolve_timeline and never computes its own."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+
+[dependencies]
+vb-contracts.workspace = true
+vb-media.workspace = true
+vb-text.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+
+[dev-dependencies]
+serde_json.workspace = true
