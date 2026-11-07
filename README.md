@@ -1,54 +1,163 @@
 <div align="center">
 
-<!-- TODO: 仓库里还没有标志图。有图之后再放居中的 logo，例如 ![Video Butler](docs/logo.png)。不要放一张不存在的图片。 -->
+<!-- TODO: 仓库里还没有 logo。有了之后放在这里，例如 ![Video Butler](docs/logo.png)。不要链接树里不存在的图片。 -->
 
-# Video Butler
+# 🎬 Video Butler · 视频管家
 
-视频管家 · 在自己的设备上，把素材剪成一份还能继续改的草稿
+**免费的本地 AI 视频管家系统，普通手机就能部署！**
+
+项目旨在帮助用户把免费的 AI 部署到移动端设备，在本地全自动剪辑私人视频和图片，节省宝贵的存储空间和时间。
 
 [![License: AGPL-3.0-or-later](https://img.shields.io/badge/license-AGPL--3.0--or--later-blue.svg)](LICENSE)
-[![Release v0.2.0](https://img.shields.io/badge/release-v0.2.0-green.svg)](https://github.com/charlesbuling/VideoButler/releases/tag/v0.2.0)
-[![Platforms](https://img.shields.io/badge/platform-macOS%20%7C%20Windows%20%7C%20iOS%20%7C%20Android%20%7C%20Linux-lightgrey.svg)](https://github.com/charlesbuling/VideoButler/releases/tag/v0.2.0)
+[![Release v0.2.0](https://img.shields.io/github/v/release/charlesbuling/VideoButler?label=release&color=green)](https://github.com/charlesbuling/VideoButler/releases/tag/v0.2.0)
+[![Downloads](https://img.shields.io/github/downloads/charlesbuling/VideoButler/total?color=orange)](https://github.com/charlesbuling/VideoButler/releases)
+[![Platforms](https://img.shields.io/badge/platform-macOS%20%7C%20Windows%20%7C%20Android%20%7C%20iOS%20%7C%20Linux-lightgrey.svg)](#download)
+[![Offline](https://img.shields.io/badge/离线-本地运行-success.svg)](#privacy)
+[![Stars](https://img.shields.io/github/stars/charlesbuling/VideoButler?style=social)](https://github.com/charlesbuling/VideoButler/stargazers)
 
-中文 | [English](README_en.md)
+[📥 下载](#download) · [✨ 能做什么](#features) · [🚀 快速开始](#quickstart) · [🛠️ 从源码构建](#build) · [中文](README.md) | [English](README_en.md)
+
+<img src="docs/assets/draft.gif" width="720" alt="选一个文件夹、选个风格，生成一份可以继续改的粗剪草稿">
 
 </div>
 
-设备端的 AI 视频粗剪。导入本地视频和照片，看懂它们，交回一份**草稿工程**，由你接着剪。可以完全离线，跑在自己的电脑和手机上。
+---
 
-AI 不交出一条已经压扁的成片当作唯一结果。它交出一份剪辑决策（Editing DSL）：每一刀、每一句字幕、每一次转场和音乐，都可以改回来，不必把整条流水线重跑一遍。
+# 💡 初衷
 
-目标是一份合格的粗剪，加上人的精修，不是无人值守的导演。
+### 存储空间，才是换设备的真正原因
 
-> 仓库在版权人公开之前仍是私有的。下面的 Release 链接按公开后的地址写。Release 还没有挂上时，用「从源码构建」。
+这几年手机和电脑越来越贵。可回头看，两年前的手机、电脑，算力其实还完全够用。很多人换新设备，往往只是因为**存储空间不够了**，而占掉空间的，大部分是视频和照片。
+
+买网盘能缓一缓，但要长期付费，私人视频放在别人的服务器上，隐私也总让人不放心。
+
+### 旅行：拍了一堆，却没时间剪
+
+出去旅行，素材一天比一天多，行程排得满满的，根本抽不出时间剪片。我希望软件能在**旅程的最后一晚**把这些素材全部剪好，第二天就能直接发朋友圈、发抖音。
+
+### 孩子出生：每天都想记下来
+
+有了宝宝以后，手机、运动相机、家里的监控摄像头，每天都在攒素材。自己完全没空剪，可还是想把孩子成长的每一天都留住。
+
+### 所以，有了视频管家
+
+这个项目用**能在你现有的手机或电脑上运行的本地模型**，搭了一套「视频管家」框架：在本地完成素材的**分类、存储、剪辑和导出**，同时保留对成片进行**二次精剪**的能力。AI 交给你的不是一条烧死的成片，而是一份随时能接着改的草稿。
+
+装上之后，你可以做这些事 👇
 
 ---
 
-# 这个项目做什么
+<a id="features"></a>
 
-* 素材留在你的磁盘上。分析、选片、成片描述都在本机完成。云端接口是可选的加速，不是前提。
-* 一条流水线读懂镜头：画面稳不稳、曝光、运动、场景，以及（装了模型之后）遮挡、构图、姿态和一句话字幕。字幕写的是画面里有什么，不是把假期里的话转写成文字。
+# ✨ 装上之后你能做什么
+
+> 下面只写 0.2.0 已经能做到的事。标着 **🧭 规划中** 的还没有做完；每个平台具体差在哪里，见后面的[现状](#status)表。
+
+### 🗂️ 一键托管，素材自己归好类
+
+指定一个文件夹，点一下「一键托管」，视频管家就会把里面的视频和照片整理好：
+
+- **按画面内容自动分类**：风景、交通、食物、动物、儿童、多人聚会……点开一个分类就能预览，勾选几条直接开一个新项目。
+- **按长相把人脸分组**：是分组，不是认人，也不和任何外部身份关联。你可以给每组起个名字，点开就能看到 TA 是主角的全部视频。
+- **自动找出回忆**：一段旅行、孩子的成长、一整年的回顾、经常一起出现的人。每段回忆都能**一键变成剪辑项目**，在后台依次剪成草稿。
+- **回忆地图**：带位置信息的回忆会标在一张**离线**世界地图上，可以按类别筛选。底图是 Natural Earth 的公有领域数据，不联网。
+- **原片不动**：素材就地读取，不复制、不改动原文件；再次整理时只处理新增或变化的素材。
+
+<div align="center">
+<img src="docs/assets/butler.gif" width="720" alt="视频管家：按画面分类、预览分类、在离线地图上查看回忆">
+</div>
+
+<!-- TODO 录屏：人脸分组（建议 macOS 或 Android 实机，用自己或已授权人物的素材，8–12 秒），文件名 docs/assets/faces.gif -->
+
+### ✂️ 选个风格，自动出一份粗剪
+
+- 选**心情**（欢快 / 伤感 / 幽默）× **题材**（旅行、成长、舞蹈、年度回顾、人群记忆……），再决定要不要**卡点**，软件按风格从场景里挑片段、排顺序。
+- **卡点剪辑**：从你导入的配乐或素材自带的声音里读出节拍，每个剪辑点都落在拍子上。
+- **挑好镜头**：自动避开抖动、过曝、主体被挡住的画面；装了对应模型后，还会看景深、人脸、人像和姿态。
+- **画面字幕**：装了 Qwen3-VL 后，给入选片段写一句描述**画面里有什么**的字幕，而不是把旅途中的闲聊转写出来；装了 Whisper 则可以把人声转成带时间戳的字幕。
+- **舞蹈与主体衔接**：按人体姿态，把同一段动作的多次拍摄接在一条时间线上，剪辑点前后动作连贯。
+- **照片也能用**：照片和同一时间拍的视频一起进场景，混在一份草稿里。
+- **每一刀都有出处**：结果页会写清每个片段为什么被选中、哪些模型没有跑；剪辑指令必须对应真实的镜头和时间码，对不上的会被拒绝，而不是被悄悄「修好」。
+- 第二次生成会沿用已经做过的分析，只处理新加入的素材。
+
+### 🎬 在软件里接着精修
+
+AI 给的只是粗剪。打开内置编辑器就能接着改：
+
+- 分割、修剪、调整顺序、复制、删除；**变速 0.25–4×**；音量与静音；转场。
+- 位置 / 缩放 / 旋转、裁剪、亮度 / 对比度 / 饱和度、背景、文字、配乐、画布比例。
+- 整份草稿支持**撤销 / 重做（200 步）**；再次生成粗剪**不会覆盖你已经改过的版本**，而是提示有新版本。
+
+<div align="center">
+<img src="docs/assets/editor.gif" width="720" alt="内置编辑器：播放预览、选中片段、变速、撤销">
+</div>
+
+### 📤 导出到你习惯的地方
+
+- **剪映专业版 / CapCut 草稿**：直接写进剪映读取的草稿目录，重启剪映就能看到，片段、转场、裁剪、字幕样式、滤镜和配乐都在里面，打开就能继续剪。
+- **OpenTimelineIO（`.otio`）**：交给其他专业剪辑软件；没有剪映的平台（如 Linux）也能用。
+- **渲染成片 MP4**（macOS，H.264 / HEVC + AAC，平台硬件编码）。
+- **无损导出**：只做了剪切的成片直接拷贝原片数据，不重新编码，画质零损失；也可以按片段分别导出。
+
+<!-- TODO 录屏：在 macOS 上导出 MP4 成片（8–10 秒），文件名 docs/assets/export-mac.gif -->
+<!-- TODO 录屏：导出剪映草稿后在剪映专业版里打开（10–15 秒），文件名 docs/assets/jianying.gif -->
+
+<a id="privacy"></a>
+
+### 🔒 离线与隐私：素材不出你的设备
+
+- 素材、分析结果、人脸分组和回忆**全部只保存在本机**；不收集遥测。
+- **不下载任何模型也能出草稿**：用规则剪一条（`vb run --offline`）。模型下载是唯一默认需要联网的环节，也可以改成从文件夹导入。
+- 云端（OpenAI 兼容接口）只是可选加速，必须你自己配置才会使用。
+
+### 📦 模型随用随装
+
+- 模型不打进主安装包，在「模型」页按需下载：显示大小，**断点续传**，下完核对 SHA-256，不符就不安装；也可以从文件夹导入。
+- 软件按角色自动挑选**已安装、且内存放得下**的模型，没装的功能就跳过，并在结果里写明。
+- 只收 **MIT、Apache-2.0、BSD-3-Clause** 许可的权重。
+
+<div align="center">
+<img src="docs/assets/models.gif" width="720" alt="模型页：按需下载并校验模型">
+</div>
+
+### ⌨️ 给开发者：命令行与稳定契约
+
+- `vb` 命令行：环境自检（`doctor`）、模板列表、单条素材出草稿、契约校验，以及应用能调用的全部操作。
+- 应用与引擎之间走稳定的契约（Footage Graph、Editing DSL 及其 JSON Schema），有往返测试。
+
+### 📱 在手机上本地运行
+
+Android arm64 APK 自带部分小模型，在模拟器和实机上跑过；iOS 可在模拟器运行（设备包未签名）。
+
+<!-- TODO 录屏：Android 实机上从选素材到出草稿（竖屏，15–20 秒），文件名 docs/assets/android.gif -->
+
+### 🧭 规划中
+
+- **首次启动引导下载模型**（0.2.1）：按设备档位推荐基础模型包，显示大小、可断点续传与校验。
+- **完整版 / 精简版两种安装包**（0.2.1）：完整版带基础模型，开箱离线可用；精简版只含应用，首次启动再下载。
+- **FCPXML** 导出。
+- **Android、Windows、Linux 上的成片渲染**（接入平台编码器；这些平台目前可以无损导出）。
+- 签名与公证；iOS 上的 ONNX Runtime 与 llama.cpp；Linux 构建接入 ONNX Runtime 与 llama.cpp。
+- 编辑器：多轨（画中画）、关键帧动画、特效 / 滤镜 / 贴纸库、音乐波形、编辑器内语音字幕、吸附节拍。
+
+> 📼 上面的动图是真实录屏：`vb serve` 提供的网页界面（与桌面、手机同一套 Flutter 界面），跑在一台 Linux 机器上，素材是 Wikimedia Commons 上的 CC0 公有领域视频，见[演示素材](#demo-media)。为了录到场景分类，录屏时手动加载了 ONNX Runtime；Linux 安装包目前还没有接上它，见[现状](#status)。
+
+---
+
+# 🧠 它是怎么做到的
+
+* 素材留在你的磁盘上。分析、挑选、描述这条剪辑，都在设备上完成。
+* 一条流水线读懂镜头：画面稳不稳、曝光、运动、场景，以及（装了模型之后）遮挡、构图、姿态和一句话字幕。
 * 按心情、题材、要不要卡点，从场景里选片段，切在拍到的时刻上。时间在契约里一律是整数微秒。
-* 草稿可以交给剪映 / CapCut，或写成 OpenTimelineIO。macOS 上也可以在软件里改完再导出视频；能无损拷贝的成片就直接拷贝原片，不重新编码。
-* 视频管家把文件夹里的视频和照片归档：人物是按脸的相似度分组，不是认人；回忆（旅行、一年、孩子长大、结伴出现的人）可以再变成一个工程。
+* **非破坏。** 决策在 Editing DSL 里。内置编辑器的每一步都是一次操作，引擎回完整状态。撤销是整份草稿。
+* **看素材。** 扫一遍镜头，按画面变化分段，再按长得像不像、拍得近不近并成场景。导演用景深、脸和人像看有没有东西挡住画面。装了 PhotoFramer 时，对入选画面再打一次构图分。
+* 目标是「合格的粗剪 + 人工精修」，而不是无人值守的导演。
 
 ---
 
-# 功能
+<a id="status"></a>
 
-- **非破坏。** 决策在 Editing DSL 里。内置编辑器的每一步都是一次操作，引擎回完整状态。撤销是整份草稿。
-- **离线。** 不下载模型也能用规则剪出一条草稿（`vb run --offline`）。语音、景深、姿态、字幕是装上对应权重之后才有的。
-- **看素材。** 扫一遍镜头，按画面变化分段，再按长得像不像、拍得近不近并成场景。导演用景深、脸和人像看有没有东西挡住画面。装了 PhotoFramer 时，对入选画面再打一次构图分。
-- **卡点与舞蹈。** 音乐或素材自己的声音可以出拍。舞蹈和「主体衔接」按姿态把同一段动作的多次拍摄接在一条时间上。
-- **视频管家。** 给人脸分组、按规则分类、找回忆，并在地图上标出有位置的回忆。底图是 Natural Earth 的公有领域轮廓，不是在线地图。
-- **照片也是素材。** 与周围拍摄的视频按时间和画面签名进同一批场景。
-- **你接着剪。** macOS 上的内置编辑器可以分割、修剪、变速、文字、音乐，并导出视频、无损拷贝、分条素材，或再写一份剪映 / OTIO 草稿。
-
-还没有的，见下面的现状表，而不是当成已经完成。
-
----
-
-# 现状
+# 📊 现状
 
 版本 **0.2.0**（`core/Cargo.toml` 与 `app/pubspec.yaml` 相同）。
 
@@ -75,8 +184,9 @@ AI 不交出一条已经压扁的成片当作唯一结果。它交出一份剪�
 
 ---
 
-# 更新
+# 📰 更新
 
+- **2026-11-03** — 仓库公开；v0.2.0 Release 上线，提供 macOS、Windows、Android、iOS 安装包。
 - **2026-10-18** — 视频管家收录照片，并可以按调用方给出的文件列表归档；APK 带上 AuraFace。
 - **2026-10-17** — 0.2.0：无损导出（拷贝原片，不重新编码）、AGPL、安装包整理。
 - **2026-10-12** — 0.1.5：内置编辑器的时间线，渲染字幕、画面和声音，以及变速。
@@ -87,7 +197,9 @@ AI 不交出一条已经压扁的成片当作唯一结果。它交出一份剪�
 
 ---
 
-# 下载与安装
+<a id="download"></a>
+
+# 📥 下载与安装
 
 0.2.0 的安装包在 GitHub Release **`v0.2.0`**：
 
@@ -98,15 +210,15 @@ AI 不交出一条已经压扁的成片当作唯一结果。它交出一份剪�
 | 资产 | 是什么 |
 |---|---|
 | `VideoButler-0.2.0-macOS-arm64.dmg` | 只有应用（约 35 MB），不含模型 |
-| `VideoButler-0.2.0-android-arm64.apk` | arm64 APK |
-| `VideoButler-0.2.0-ios-unsigned.ipa` | 未签名的 iOS 包 |
+| `VideoButler-0.2.0-windows-x64.zip` | Windows x64（约 33 MB），不含模型 |
+| `VideoButler-0.2.0-android-arm64.apk` | arm64 APK（约 772 MB） |
+| `VideoButler-0.2.0-iOS-unsigned.ipa` | 未签名的 iOS 包（约 22 MB） |
 | `SHA256SUMS.txt` | 上面安装包的 sha256 |
+| `models-manifest.json` | 模型清单（地址、字节数、sha256），`scripts/fetch-models.sh` 读的就是它 |
 
 模型不作为 Release 资产发布，而是从各自的 Hugging Face 官方地址下载，见下面「模型文件从哪里下载」。
 
-Windows x64：`VideoButler-0.2.0-windows-x64.zip`（约 31 MB，不含模型；模型经 Hugging Face / `scripts/fetch-models.sh`）。
-
-仓库公开、Release 挂上之前，这些 URL 不存在。那时请从源码构建。
+Windows 的模型同样经 Hugging Face / `scripts/fetch-models.sh` 或应用内「模型」页下载。
 
 ## macOS
 
@@ -174,7 +286,7 @@ shasum -a 256 ggml-base.bin   # 和清单里的 sha256 对比
 
 ---
 
-# 模型
+# 🧩 模型
 
 权重许可只有 MIT、Apache-2.0 或 BSD-3-Clause。字节数和 sha256 来自 `core/vb-pipeline/src/models.rs`，是目录里记录的上游文件，不是估出来的。
 
@@ -204,7 +316,9 @@ PhotoFramer 的上游是 PyTorch 权重，由 `scripts/convert-photoframer.sh` �
 
 ---
 
-# 快速开始
+<a id="quickstart"></a>
+
+# 🚀 快速开始
 
 命令行只需要 Rust 和 ffmpeg。不装模型、断网也可以出一份 OTIO 草稿：
 
@@ -236,7 +350,9 @@ open app/build/macos/Build/Products/Release/video_butler.app
 
 ---
 
-# 从源码构建
+<a id="build"></a>
+
+# 🛠️ 从源码构建
 
 共同的东西：Rust（工作区要求 1.85，edition 2024）、Flutter，以及各平台脚本里写明的工具链。`scripts/env.sh` 集中放路径，不要改 shell 配置文件来迁就这一份检出。
 
@@ -313,7 +429,7 @@ sudo apt install clang cmake ninja-build pkg-config libgtk-3-dev
 
 ---
 
-# 架构
+# 🏗️ 架构
 
 依赖只朝一个方向。`vb-narrative` 只依赖 `vb-contracts` 和 `vb-infer`，有测试守着。
 
@@ -358,7 +474,7 @@ vb-pipeline           运行、缓存、工程、模型库、视频管家、编�
 
 ---
 
-# 仓库结构
+# 📁 仓库结构
 
 ```
 core/            Rust 工作区（引擎）
@@ -377,9 +493,9 @@ CONTRIBUTING.md
 
 ---
 
-# 参与贡献
+# 🤝 参与贡献
 
-见 [CONTRIBUTING.md](CONTRIBUTING.md)。拉取请求对着 **`macos-app`**。没有自动 CI，推送前在本地跑 CONTRIBUTING.md 里的检查。
+见 [CONTRIBUTING.md](CONTRIBUTING.md)。拉取请求对着 **`main`**。没有自动 CI，推送前在本地跑 CONTRIBUTING.md 里的检查。
 
 你保留版权。合并的前提是接受 [CLA.md](CLA.md)（拉取请求里勾选，并且每个提交有 `Signed-off-by`）。维护者可以不合并，而自己把想法重新实现。商业授权写 **217010072@link.cuhk.edu.cn**。
 
@@ -387,7 +503,7 @@ CONTRIBUTING.md
 
 ---
 
-# 第三方
+# 📜 第三方
 
 链接方式在 [NOTICE](NOTICE)，完整的第三方名单、许可证和版权声明在 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。短的版本：
 
@@ -419,11 +535,19 @@ CONTRIBUTING.md
 
 完整名单（全部原生库、模型、Rust crate 和 Dart 包，以及各自的许可证与必需的版权声明）见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。模型权重各自保留其原有许可证，不随本项目改变；视频管家本身以 AGPL-3.0-or-later 授权（见 [LICENSE](LICENSE)、[NOTICE](NOTICE)）。
 
+<a id="demo-media"></a>
+
+## 演示素材
+
+README 里的动图用的是 [Wikimedia Commons](https://commons.wikimedia.org/) 上以 **CC0** 发布到公有领域的视频，感谢这些作者。为了演示回忆和地图，给它们写入了拍摄时间和地点：地点是各视频的实际拍摄地，日期是为演示设定的。用到的文件见 [`docs/assets/README.md`](docs/assets/README.md)。
+
 ---
 
-# Star
+# ⭐ Star
 
-<!-- TODO: 仓库公开并有了 star 之后，再嵌 Star History 图。不要放一张不存在的图片。
+如果视频管家帮你省下了时间或存储空间，欢迎点一个 ⭐，让更多人看到它。
+
+<!-- TODO: 有了一些 star 之后，再嵌 Star History 图。不要放一张不存在的图片。
      例如 https://api.star-history.com/svg?repos=charlesbuling/VideoButler&type=Date
 -->
 
