@@ -2,53 +2,182 @@
 
 <!-- TODO: There is no logo in the repo yet. When one exists, put it here, for example ![Video Butler](docs/logo.png). Do not link an image that is not in the tree. -->
 
-# Video Butler
+# 🎬 Video Butler · 视频管家
 
-On-device AI video auto-editing. A draft you keep editing.
+**A free, local AI video butler — deployable on an ordinary phone!**
+
+This project helps users deploy free AI onto their mobile devices to edit private videos and photos fully automatically, on the device, saving precious storage space and users' time.
 
 [![License: AGPL-3.0-or-later](https://img.shields.io/badge/license-AGPL--3.0--or--later-blue.svg)](LICENSE)
-[![Release v0.2.0](https://img.shields.io/badge/release-v0.2.0-green.svg)](https://github.com/charlesbuling/VideoButler/releases/tag/v0.2.0)
-[![Platforms](https://img.shields.io/badge/platform-macOS%20%7C%20Windows%20%7C%20iOS%20%7C%20Android%20%7C%20Linux-lightgrey.svg)](https://github.com/charlesbuling/VideoButler/releases/tag/v0.2.0)
+[![Release v0.2.0](https://img.shields.io/github/v/release/charlesbuling/VideoButler?label=release&color=green)](https://github.com/charlesbuling/VideoButler/releases/tag/v0.2.0)
+[![Downloads](https://img.shields.io/github/downloads/charlesbuling/VideoButler/total?color=orange)](https://github.com/charlesbuling/VideoButler/releases)
+[![Platforms](https://img.shields.io/badge/platform-macOS%20%7C%20Windows%20%7C%20Android%20%7C%20iOS%20%7C%20Linux-lightgrey.svg)](#download)
+[![Offline](https://img.shields.io/badge/offline-runs%20locally-success.svg)](#privacy)
+[![Stars](https://img.shields.io/github/stars/charlesbuling/VideoButler?style=social)](https://github.com/charlesbuling/VideoButler/stargazers)
 
-[中文](README.md) | English
+[📥 Download](#download) · [✨ What it does](#features) · [🚀 Quick start](#quickstart) · [🛠️ Build from source](#build) · [中文](README.md) | English
+
+<img src="docs/assets/draft.gif" width="720" alt="Pick a folder, pick a style, and get a rough-cut draft you can keep editing">
 
 </div>
 
-On-device AI rough cuts. Import local video and photos, understand them, and get back a **draft project** you keep editing. A complete result does not need a network. It runs on your own computer and phone.
+Video Butler is a "personal editing assistant" that lives on your own phone and computer. Tell it which folder your footage is in, and it watches hundreds or thousands of videos and photos right on the device: which are scenery, which are food, which are your kids, which belong to one trip, which seconds are steady, well lit and unblocked. Then, following the mood and topic you choose, it picks segments, orders them and cuts on the beat to produce a decent rough cut.
 
-The AI does not hand you a flattened render as the only result. It hands you an editing decision (the Editing DSL). Every cut, subtitle, transition, and music choice can be undone without re-running the pipeline.
+It is made for everyone who shoots a lot and edits little: travellers with no time to edit, new parents worn out by childcare who still want to record their baby growing up, and anyone whose camera roll is full but who can't bear to delete a single memory. You don't need editing skills, and you don't need an expensive new computer — a phone or computer from two years ago is enough to run it.
 
-The bar is a qualified rough cut plus human finishing, not an unattended director.
-
-> The repository stays private until the copyright holder publishes it. The Release links below are the addresses after that. If the Release is not up yet, build from source.
+We stay **free, local and private**: the software is open source and free, and the models it uses are freely available open models. Analysis and editing happen entirely on your device; footage is not uploaded, no telemetry is collected, and it can produce a cut offline. Most importantly, the AI hands you **not a flattened, burned-in final video, but a draft you can keep editing at any time** — every cut, caption and transition can be adjusted in the app, or exported to Jianying (CapCut) or another professional editor for finishing. The machine does the tedious eighty percent; the last twenty percent, the part that carries your heart, stays with you.
 
 ---
 
-# What it does
+# 💡 Why this exists
 
-* Footage stays on your disk. Analysis, selection, and the description of the cut run on the device. A cloud endpoint is an optional accelerator, not a requirement.
-* One pipeline reads the shots: stability, exposure, motion, scenes, and — once the models are installed — occlusion, composition, pose, and a one-sentence caption. Captions say what the picture shows, not a transcript of holiday speech.
-* Mood, topic, and whether to cut on the beat choose segments from scenes. In the contracts, time is integer microseconds.
-* A draft can go to 剪映 / CapCut, or to OpenTimelineIO. On macOS you can also finish it in the built-in editor and export a video. A cut that can be copied losslessly is copied, not re-encoded.
-* The video butler files videos and photos in a folder. People are grouped by how alike their faces look, not recognised. Memories (a trip, a year, a child growing up, people who appear together) can become a project.
+### Reason one: storage is the real reason we upgrade
+
+Lately, for reasons everyone knows, computers and phones have been getting more expensive. Yet look at the phone or computer you bought two years ago: its compute still fully meets daily needs — scrolling videos, taking photos, office work, no lag at all. What really pushes many people to upgrade is often just one message: "Storage full" — and most of that space is taken by videos and photos. I have been there too, picking through photos one by one at that pop-up, deleting until my hands are tired and still unable to let go. A cloud drive looks like a way out, but the monthly subscription adds up over the years, and putting the most private images of your kids, your family and yourself on someone else's server never feels quite right. So I wondered: could the device itself turn mountains of raw footage into compact edited keepsakes? That would free up space without losing a single memory.
+
+### Reason two: by the last night of the trip, the video should be done
+
+On many trips I have shot a huge amount: sunrises, street scenes, food, friends running and laughing on the beach… But the schedule is packed — on the road all day, asleep the moment you lie down — so there is no time to edit. Back home, hundreds of clips sit quietly in the camera roll, the excitement cools day by day, and they are never opened again. I have always wanted software like this: on the last night of the trip, back at the hotel, I plug in my phone and let it organise everything; when I wake up the next morning, all the footage has become a travel video with music, cut on the beat. I tweak it a little and post it straight to WeChat Moments and Douyin, sharing the joy while everyone still remembers it!
+
+### Reason three: every day of the baby's life deserves to be remembered
+
+We recently welcomed a baby into the family. Only as a parent do you realise how fast children grow: the first laugh out loud, the first roll-over, the first time standing up holding the sofa — these moments flash by and never come back once missed. So the phone, the action camera and the home security camera keep shooting and recording every day, and the footage, scattered across several devices, keeps piling up. But new parents are exhausted from feeding and getting the baby to sleep, there is simply no time to edit day to day, and yet we truly want to record every moment of the baby growing up. I want a butler that finds today's cutest few seconds in that footage on its own, and strings our child's growth into a story, day by day.
+
+### So: Video Butler
+
+For these reasons, this project uses local models that the phone and computer in your hands can run to build a "video butler" framework that classifies, stores, edits and exports locally, while keeping a second, finer edit possible:
+
+- **Classify**: footage is sorted by picture content into scenery, transport, food, animals, children, gatherings and more; faces are grouped by look; and "memories" such as a trip, a year in review or a child growing up are found automatically.
+- **Store**: footage is read in place, originals are never copied or modified; analysis, face groups and memories are kept only on this device, and the next pass only handles new footage.
+- **Edit**: pick a mood and a topic, decide whether to cut on the beat, and it avoids shaky, over-exposed and blocked frames, picks good shots and lays out a rough cut automatically.
+- **Export**: the draft can become a Jianying / CapCut draft or an OpenTimelineIO file, and on macOS it can be rendered straight to MP4; a cut that only trims can be exported losslessly, with no loss of quality.
+- **Second, finer edit**: the AI only gives you a starting point; in the built-in editor you can keep splitting, changing speed, adding text, swapping music, undoing and redoing, and your edited version is not overwritten by the next automatic run.
+
+Once installed, here is what you can do 👇
 
 ---
 
-# Features
+<a id="features"></a>
 
-- **Non-destructive.** Decisions live in the Editing DSL. Each step in the built-in editor is one operation, and the engine answers with the whole state. Undo is a whole draft.
-- **Offline.** A rule-based draft works with no model weights and no network (`vb run --offline`). Speech, depth, pose, and captions exist only after those weights are installed.
-- **Reads the footage.** One sweep, segments where the view changes, then scenes by look and by when they were filmed. The director uses depth, faces, and a person mask to see what blocks the frame. With PhotoFramer installed, shortlisted frames get a second composition score.
-- **Beat and dance.** Music, or the footage's own sound, can supply a beat. Dance and subject-continuity place several takes of one action on one timeline by pose.
-- **Video butler.** Groups faces, files clips by rules, finds memories, and draws the located ones on a map. The outlines are Natural Earth's public-domain data, not an online map.
-- **Photos are footage.** They join the scenes of the videos filmed around them, by time and by a colour-and-layout signature.
-- **You keep editing.** On macOS the built-in editor splits, trims, retimes, and sets text and music, then exports a video, a lossless copy, individual clips, or another 剪映 / OTIO draft.
+# ✨ What you can do with it
 
-What is not built yet is in the status table. It is not described as done.
+> Only what 0.2.0 already does is listed here. Items marked **🧭 Planned** are not finished; exactly what each platform lacks is in the [status](#status) table below.
+
+### 🗂️ One-click butler: footage sorts itself
+
+Point it at a folder, tap "一键托管" (one-click butler), and leave the rest to Video Butler. No more hunting through thousands of files for one clip: open a category, a person or a memory, and what you want is right there.
+
+- **Automatic categories by what is in the picture**: scenery, transport, food, animals, children, group gatherings… The software looks at the picture itself, not the file name. Open a category to preview its clips, tick a few, and start a new editing project.
+- **Faces grouped by look**: the same person across different videos lands in the same group. This is grouping, not recognition, and never linked to any outside identity. Name each group — "Baby", "Dad" — and open it to see every video where that person is the star.
+- **Memories found for you**: a trip, a child growing up, a year in review, people who often appear together — Video Butler finds them on its own. Each memory can **become an editing project in one click** and is cut into a draft in the background, one after another, ready when you come back.
+- **Memory map**: memories with a location are pinned on an **offline** world map, filterable by category, so you can see at a glance where you have been and what you left there. The base map is Natural Earth's public-domain data; no network.
+- **Originals untouched**: footage is read in place, never copied or modified, so it takes no extra space; the next organise pass only handles new or changed files, so it gets faster the more you use it.
+
+<div align="center">
+<img src="docs/assets/butler.gif" width="720" alt="Video Butler: categories by picture content, category preview, memories on the offline map">
+</div>
+
+<!-- TODO recording: face grouping (macOS or an Android phone recommended, with your own or consented footage, 8–12 s), file docs/assets/faces.gif -->
+
+### ✂️ Pick a style, get a rough cut
+
+No editing skills needed: pick a style, tap "生成草稿" (generate draft), and hundreds of clips become a short film with rhythm and shape.
+
+- **Mood × topic**: choose a **mood** (happy / sad / funny) × a **topic** (travel, growing up, dance, year in review, people memories…), then decide whether to **cut on the beat**. The software picks segments from scenes and orders them by that style; the same footage in another style has a different flavour.
+- **Beat cuts**: the beat is read from music you import or from the footage's own sound, and every cut lands on a beat, so the picture moves with the music.
+- **Good shots**: shaky, over-exposed and blocked frames are avoided automatically, keeping the steadiest, brightest, clearest seconds; with the matching models installed it also weighs depth, faces, people and pose.
+- **Picture captions**: with Qwen3-VL installed, each chosen segment gets a caption describing **what is in the picture**, not a transcript of holiday chatter; with Whisper installed, speech can become timestamped subtitles.
+- **Dance and subject continuity**: by body pose, several takes of the same action are joined on one timeline so the motion flows across each cut, as if it were one continuous shot.
+- **Photos too**: photos join the scenes of videos shot at the same time, mixed into one draft, so snapshots from the trip are not left behind.
+- **Every cut has a reason**: the result page says why each segment was chosen and which models did not run. Edit instructions must match real shots and timecodes; ones that do not are rejected, not quietly "fixed". Every cut you see comes from footage you really shot.
+- **Saves more time the more you use it**: a second run reuses the analysis already done and only processes newly added footage, so trying another style doesn't mean waiting from scratch.
+
+### 🎬 Keep refining in the app
+
+The AI only gives you a good starting point. Open the built-in editor and keep going, much as you would in Jianying, until the video is truly yours.
+
+- **Editing**: split, trim, reorder, duplicate, delete; **speed 0.25–4×**, to slow down your child's smile or speed through travel shots; volume and mute; transitions.
+- **Picture and packaging**: position / scale / rotation, crop, brightness / contrast / saturation, background, text, music, canvas ratio — switch between landscape and portrait at will.
+- **Edit fearlessly**: the whole draft has **undo / redo (200 steps)**; generating a new rough cut **does not overwrite the version you edited** — you are told a new version is available, so your work is never washed away.
+
+<div align="center">
+<img src="docs/assets/editor.gif" width="720" alt="Built-in editor: preview playback, select a clip, change speed, undo">
+</div>
+
+### 📤 Export to where you already work
+
+Once it's cut, you decide where it goes: keep polishing in software you know, or take the finished video and share it.
+
+- **剪映专业版 (Jianying Pro) / CapCut drafts**: written straight into the draft folder Jianying reads; restart Jianying and it is there, with clips, transitions, crops, caption styles, filters and music, ready to keep editing.
+- **OpenTimelineIO (`.otio`)**: for other professional editors; also works on platforms without Jianying (such as Linux).
+- **Rendered MP4** (macOS, H.264 / HEVC + AAC, hardware encoding), ready to post.
+- **Lossless export**: a cut that only trims copies the original data without re-encoding, so there is zero quality loss; segments can also be exported one by one, keeping just the parts you really want.
+
+<!-- TODO recording: export an MP4 on macOS (8–10 s), file docs/assets/export-mac.gif -->
+<!-- TODO recording: export a Jianying draft and open it in 剪映专业版 (10–15 s), file docs/assets/jianying.gif -->
+
+<a id="privacy"></a>
+
+### 🔒 Offline and private: footage never leaves your device
+
+Your child asleep, your family's everyday life, the clips you want to keep to yourself — they belong only on your own device.
+
+- Footage, analysis, face groups and memories are **stored only on this device**; no telemetry.
+- **A draft without downloading any model**: a rule-based cut (`vb run --offline`). Downloading models is the only step that needs a network by default, and it can be replaced by importing from a folder, fully offline.
+- The cloud (an OpenAI-compatible endpoint) is only an optional accelerator, used only if you configure it yourself; without that, your footage is never sent to any cloud.
+
+### 📦 Models installed as you need them
+
+The main app stays light: install a model only for the ability you need, and don't spend space on features you won't use.
+
+- Models are not in the main installer. Download them on the Models page as needed: the size is shown, **downloads resume**, and the SHA-256 is checked when done — a mismatch is not installed. You can also import from a folder.
+- For each role the app picks an **installed model that fits in memory**; features without a model are skipped and the result says so, so one missing model never blocks you.
+- Only **MIT, Apache-2.0 and BSD-3-Clause** licensed weights are accepted — free to use, with clear provenance.
+
+<div align="center">
+<img src="docs/assets/models.gif" width="720" alt="Models page: download and verify a model on demand">
+</div>
+
+### ⌨️ For developers: a CLI and stable contracts
+
+Want to batch-process, script, or contribute? Everything the engine can do is callable from the command line.
+
+- The `vb` command line: environment check (`doctor`), template list, a draft from one clip, contract validation, and every operation the app can call.
+- The app and the engine talk through stable contracts (Footage Graph, Editing DSL and their JSON Schema), with round-trip tests, so it's easy to build on.
+
+### 📱 Runs locally on your phone
+
+You shoot on your phone, and the editing can stay on your phone too. The Android arm64 APK carries some small models and has run on emulators and real phones; iOS runs in the simulator (the device build is unsigned).
+
+<!-- TODO recording: on an Android phone, from picking footage to a draft (portrait, 15–20 s), file docs/assets/android.gif -->
+
+### 🧭 Planned
+
+- **First-launch guided model download** (0.2.1): recommends a base model pack for the device tier, with size, resumable download and verification.
+- **Full / lite installers** (0.2.1): the full one ships base models and works offline out of the box; the lite one is just the app and downloads models on first launch.
+- **FCPXML** export.
+- **Rendered export on Android, Windows and Linux** (wiring the platform encoders; these platforms can export losslessly today).
+- Signing and notarization; ONNX Runtime and llama.cpp on iOS; ONNX Runtime and llama.cpp in the Linux build.
+- Editor: multiple tracks (picture-in-picture), keyframes, an effects / filters / stickers library, music waveforms, in-editor speech captions, snap to beat.
+
+> 📼 The animations above are real screen recordings: the web UI served by `vb serve` (the same Flutter UI as desktop and mobile), running on a Linux machine, with CC0 public-domain videos from Wikimedia Commons — see [demo media](#demo-media). To record the scene categories, ONNX Runtime was loaded by hand; the Linux build does not wire it yet, see [status](#status).
 
 ---
 
-# Status
+# 🧠 How it works
+
+* Footage stays on your disk. Analysis, selection, and the description of the cut run on the device.
+* One pipeline reads the shots: stability, exposure, motion, scenes, and — once the models are installed — occlusion, composition, pose, and a one-sentence caption.
+* Mood, topic, and whether to cut on the beat choose segments from scenes, cut on the moments that were filmed. In the contracts, time is integer microseconds.
+* **Non-destructive.** Decisions live in the Editing DSL. Each step in the built-in editor is one operation, and the engine answers with the whole state. Undo is a whole draft.
+* **Reads the footage.** One sweep, segments where the view changes, then scenes by look and by how close they were filmed. The director uses depth, faces, and a person mask to see what blocks the frame. With PhotoFramer installed, shortlisted frames get a second composition score.
+* The bar is a qualified rough cut plus human finishing, not an unattended director.
+
+---
+
+<a id="status"></a>
+
+# 📊 Status
 
 Version **0.2.0** (`core/Cargo.toml` and `app/pubspec.yaml` match).
 
@@ -75,8 +204,9 @@ Version **0.2.0** (`core/Cargo.toml` and `app/pubspec.yaml` match).
 
 ---
 
-# News
+# 📰 News
 
+- **2026-11-03** — The repository is public; the v0.2.0 Release is up with macOS, Windows, Android and iOS installers.
 - **2026-10-18** — The video butler files photos and can take the caller's file list. The APK carries AuraFace.
 - **2026-10-17** — 0.2.0: lossless export (copy the footage, do not re-encode), AGPL, packaging.
 - **2026-10-12** — 0.1.5: the editor timeline, rendering captions, picture, and sound, and retiming.
@@ -87,7 +217,9 @@ Older history is in Git. Product decisions live in `docs/AI Video Auto-Editing �
 
 ---
 
-# Download and install
+<a id="download"></a>
+
+# 📥 Download and install
 
 The 0.2.0 installers are GitHub Release **`v0.2.0`**:
 
@@ -98,15 +230,15 @@ Installers are produced in `dist/`, which Git ignores. After they are published,
 | Asset | What it is |
 |---|---|
 | `VideoButler-0.2.0-macOS-arm64.dmg` | the app only (about 35 MB), models not included |
-| `VideoButler-0.2.0-android-arm64.apk` | arm64 APK |
-| `VideoButler-0.2.0-ios-unsigned.ipa` | unsigned iOS package |
+| `VideoButler-0.2.0-windows-x64.zip` | Windows x64 (about 33 MB), models not included |
+| `VideoButler-0.2.0-android-arm64.apk` | arm64 APK (about 772 MB) |
+| `VideoButler-0.2.0-iOS-unsigned.ipa` | unsigned iOS package (about 22 MB) |
 | `SHA256SUMS.txt` | sha256 of the installers above |
+| `models-manifest.json` | the model manifest (URLs, byte counts, sha256) that `scripts/fetch-models.sh` reads |
 
 Models are not Release assets. They download from each model's official Hugging Face URL; see "Where model files come from" below.
 
-Windows x64: `VideoButler-0.2.0-windows-x64.zip` (~31 MB, no models; get models from Hugging Face / `scripts/fetch-models.sh`).
-
-Until the repository is public and the Release exists, these URLs do not resolve. Build from source.
+Windows models likewise download from Hugging Face, via `scripts/fetch-models.sh` or the app's Models page.
 
 ## macOS
 
@@ -174,7 +306,7 @@ The directory matches `core/vb-pipeline/src/library.rs`:
 
 ---
 
-# Models
+# 🧩 Models
 
 A weight's license is MIT, Apache-2.0, or BSD-3-Clause. Byte counts and the sha256 live in `core/vb-pipeline/src/models.rs`. They are the upstream files the catalogue records.
 
@@ -204,7 +336,9 @@ The app uses, for each role, an installed model that fits in memory. With no cap
 
 ---
 
-# Quick start
+<a id="quickstart"></a>
+
+# 🚀 Quick start
 
 The command line needs Rust and ffmpeg. With no models and no network it still writes an OTIO draft:
 
@@ -236,7 +370,9 @@ Without Xcode, `./scripts/run-macos.sh` serves the same Dart UI and engine at `h
 
 ---
 
-# Build from source
+<a id="build"></a>
+
+# 🛠️ Build from source
 
 In common: Rust (the workspace asks for 1.85, edition 2024), Flutter, and the tools each platform script names. `scripts/env.sh` holds the paths. Do not edit a shell profile to match one checkout.
 
@@ -255,17 +391,10 @@ Needs Xcode. The deployment target is macOS 12. Not notarized. Install models se
 
 The Gradle wrapper is in the repo (Gradle 9.3.1, `app/android/gradlew`). You still need the Android SDK and NDK, the Rust Android targets, and the LGPL ffmpeg the script builds. `./gradlew` alone does not build the app: the engine `.so` files come from the packaging script.
 
-The small models have to be in `VB_MODELS_DIR` first (on a Mac that defaults to the library models directory). Prepare it from the Release:
+The small models have to be in `VB_MODELS_DIR` first (on a Mac that defaults to the library models directory). Prepare it from Hugging Face with `fetch-models.sh` (`--base --platform android` is exactly these seven files):
 
 ```bash
-./scripts/fetch-models.sh --out "$HOME/android-models" \
-  depth-anything-v2-small.onnx \
-  face_detection_yunet_2023mar.onnx \
-  human_segmentation_pphumanseg_2023mar.onnx \
-  rtmo-s.onnx \
-  ggml-base-q5_1.bin \
-  siglip2-base-patch16-224-vision-fp16.onnx \
-  auraface-v1-glintr100.onnx
+./scripts/fetch-models.sh --out "$HOME/android-models" --base --platform android
 
 VB_MODELS_DIR="$HOME/android-models" ./scripts/build-android.sh
 ```
@@ -320,7 +449,7 @@ The older private `charlesbuling/VideoBulter-windows` repo is historical; this r
 
 ---
 
-# Architecture
+# 🏗️ Architecture
 
 Dependencies flow one way. `vb-narrative` may depend only on `vb-contracts` and `vb-infer`. A test checks that.
 
@@ -365,7 +494,7 @@ Two decisions that already cost real bugs:
 
 ---
 
-# Repository layout
+# 📁 Repository layout
 
 ```
 core/            Rust workspace (the engine)
@@ -384,9 +513,9 @@ Product requirements are in [PRD.md](PRD.md) (Chinese), the architecture in [doc
 
 ---
 
-# Contributing
+# 🤝 Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md). Pull requests target **`macos-app`**. There is no automatic CI. Run the checks in CONTRIBUTING.md locally before you push.
+See [CONTRIBUTING.md](CONTRIBUTING.md). Pull requests target **`main`**. There is no automatic CI. Run the checks in CONTRIBUTING.md locally before you push.
 
 You keep your copyright. A merge requires [CLA.md](CLA.md): tick it in the pull request, and put `Signed-off-by` on every commit. Maintainers may reimplement an idea instead of merging. Commercial licensing: **217010072@link.cuhk.edu.cn**.
 
@@ -394,7 +523,7 @@ The code of conduct is [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md). Security report
 
 ---
 
-# Third parties
+# 📜 Third parties
 
 How each piece is linked or bundled is in [NOTICE](NOTICE); the full third-party list, licenses and required notices are in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). Short form:
 
@@ -408,7 +537,7 @@ Do not add CoTracker3 or MMAudio (CC-BY-NC), and do not add someone else's copyl
 
 ---
 
-# Acknowledgements
+# 🙏 Acknowledgements
 
 Video Butler stands on the shoulders of wonderful open-source projects and openly licensed models. An editor that cuts your footage offline, on your own device, would not exist without them. Heartfelt thanks to their authors, maintainers and contributors:
 
@@ -426,11 +555,19 @@ Video Butler stands on the shoulders of wonderful open-source projects and openl
 
 The full list — every native library, model, Rust crate and Dart package, with its license and any required copyright notice — is in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). Model weights keep their own licenses; Video Butler itself is AGPL-3.0-or-later (see [LICENSE](LICENSE) and [NOTICE](NOTICE)).
 
+<a id="demo-media"></a>
+
+## Demo media
+
+The animations in this README use videos released into the public domain under **CC0** on [Wikimedia Commons](https://commons.wikimedia.org/) — thanks to their authors. To demonstrate memories and the map, capture times and locations were written into them: each location is where that video was actually filmed; the dates were set for the demo. The files used are listed in [`docs/assets/README.md`](docs/assets/README.md).
+
 ---
 
-# Star
+# ⭐ Star
 
-<!-- TODO: After the repository is public and has stars, embed a Star History chart. Do not link an image that is not in the tree.
+If Video Butler saved you time or storage, a ⭐ helps more people find it.
+
+<!-- TODO: Once there are some stars, embed a Star History chart. Do not link an image that does not exist.
      For example https://api.star-history.com/svg?repos=charlesbuling/VideoButler&type=Date
 -->
 
